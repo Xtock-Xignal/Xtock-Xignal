@@ -6,6 +6,7 @@ from tqdm import tqdm
 import re
 import time
 import nltk
+import os
 from nltk.corpus import stopwords
 
 wikipedia.set_lang("en")
@@ -102,8 +103,10 @@ def clean_text_basic(text):
     return text.strip()
 
 if __name__ == "__main__":
-    input_file = 'C:/p_project/p_project/sp500_full_wiki.jsonl'
-    output_file = 'C:/p_project/p_project/sp500_sbert_input.jsonl'
+    
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    input_file = os.path.join(BASE_DIR, 'sp500_full_wiki.jsonl')
+    output_file = os.path.join(BASE_DIR, 'sp500_sbert_input.jsonl')
     
     df = pd.read_json(input_file, lines = True)
     

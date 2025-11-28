@@ -2,6 +2,12 @@ import google.generativeai as genai
 import chromadb
 import os
 from sentence_transformers import SentenceTransformer
+from transformers import pipeline
+from dotenv import load_dotenv
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+load_dotenv(os.path.join(BASE_DIR, "../.env"))
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 if not GOOGLE_API_KEY:
@@ -11,11 +17,12 @@ genai.configure(api_key = GOOGLE_API_KEY)
 llm_model = genai.GenerativeModel('gemini-flash-lite-latest')
 
 
+db_path = os.path.join(BASE_DIR, './chroma_db')
 
-db_path = './chroma_db'
 client = chromadb.PersistentClient(path = db_path)
 collection = client.get_collection(name = 'sp500_companies')
-model = SentenceTransformer('all-MiniLM-L6-v2')
+sbert_model = SentenceTransformer('BAAI/bge-m3')
+finbert_model = pipeline("sentiment-analysis", model = "prosusAI/finbert")
 
 def ask_gemini_for_context(tweet_text):
     prompt = f"""
@@ -36,6 +43,13 @@ def ask_gemini_for_context(tweet_text):
         print(f" Gemini API Error: {e}")
         return ""
     
+def analyze_sentiment(text):
+    try:
+        res = finbert_model(text[:512])[0]
+        return {"label": res['label'], "score": round(res['score'], 4)}
+    except:
+        return {"label": "neutral", "score": 0.0}
+    
 def hybrid_search(tweet_text):
     ai_context = ask_gemini_for_context(tweet_text)
     print(f" Gemini Context: {ai_context}")
@@ -45,7 +59,9 @@ def hybrid_search(tweet_text):
     else:
         expanded_query = tweet_text
         
-    query_vector = model.encode(expanded_query).tolist()
+    sentiment_result = analyze_sentiment(tweet_text)
+        
+    query_vector = sbert_model.encode(expanded_query).tolist()
     
     results = collection.query(
         query_embeddings = [query_vector],
@@ -64,7 +80,11 @@ def hybrid_search(tweet_text):
                 "keywords": keywords
             })
             
-    return top_companies
+    return {
+            "input_text": tweet_text,
+            "sentiment": sentiment_result,
+            "matches": top_companies
+        }
 
         
 if __name__ == "__main__":
@@ -72,21 +92,20 @@ if __name__ == "__main__":
         "Introducing Gemini 3. It’s the best model in the world for multimodal understanding, and our most powerful agentic + vibe coding model yet. Gemini 3 can bring any idea to life, quickly grasping context and intent so you can get what you need with less prompting. Find Gemini"
     ]
 
-for tweet in test_tweets:
+    for tweet in test_tweets:
         print("=" * 60)
         
         # 1. 검색 함수 호출 (트윗 1개씩)
         matches = hybrid_search(tweet)
-        
-        # 2. 결과 출력
-        print(f"Tweet: \"{tweet}\"")
+
         
         if not matches:
             print("No matches found.")
         else:
-            for item in matches:                
-                print(f"Rank {item['rank']}: {item['ticker']} ({item['name']})")
-                print(f" Score: {item['score']:.4f}")
-                print(f"Keywords: {item['keywords'][:50]}...")
-                print("-" * 30)
+            sent = matches['sentiment']
+            print(f"Sentiment: [{sent['label'].upper()}] (Score: {sent['score']})")
+            
+            print(f"Matched Companies: ")
+            for m in matches['matches']:
+                print(f" -{m['ticker']} ({m['name']})")
         print("\n")

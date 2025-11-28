@@ -6,12 +6,16 @@ import shutil
 import os
 
 def build_chroma_db():
-    input_file = 'sp500_sbert_input.jsonl'
-    db_path = './chroma_db'
-    model_name = 'all-MiniLM-L6-v2'
+    
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    
+    input_file = os.path.join(BASE_DIR, 'sp500_sbert_input.jsonl')
+    db_path = os.path.join(BASE_DIR, './chroma_db')
+    model_name = 'BAAI/bge-m3'
     
     if os.path.exists(db_path):
         shutil.rmtree(db_path)
+        
     df = pd.read_json(input_file, lines = True)
     
     print(df.columns.tolist())
