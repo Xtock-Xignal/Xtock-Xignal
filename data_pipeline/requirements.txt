@@ -1,20 +1,29 @@
-# 서버 구동용
-fastapi
-uvicorn
-requests
-# 데이터 처리 및 AI 용
+# --- 데이터 처리 및 수학 연산 ---
 pandas
+numpy
+
+# --- AI 및 임베딩 ---
 chromadb
 sentence-transformers
 keybert
 google-generativeai
-torch
-torchvision
-torchaudio
 tqdm
 nltk
-# 크롤링 용
+
+# --- 하이퍼파라미터 최적화 (학습용) ---
+optuna
+
+# --- 크롤링 및 데이터 수집 ---
+requests
 wikipedia
 yfinance
 lxml
 html5lib
+
+# --- 유틸리티 ---
+python-dotenv
+
+# --- Backend 서버용 ---
+fastapi
+uvicorn
+requests

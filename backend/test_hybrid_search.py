@@ -7,9 +7,13 @@ from dotenv import load_dotenv
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-load_dotenv(os.path.join(BASE_DIR, "../.env"))
 
+load_dotenv(os.path.join(BASE_DIR, "../.env"))
+ 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+if GOOGLE_API_KEY:
+    GOOGLE_API_KEY = GOOGLE_API_KEY.strip()
 if not GOOGLE_API_KEY:
     raise ValueError("Don't Exist GOOGLE API KEY. Check .env file")
 genai.configure(api_key = GOOGLE_API_KEY)

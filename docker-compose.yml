@@ -9,8 +9,10 @@ services:
     volumes:
       - ./backend:/app
       - ./backend/chroma_db:/app/chroma_db
-    environment:
-      - GOOGLE_API_KEY=AIzaSyBaGz0l5rl4gPVd4zCgfizlrNa1H_F0z3I
+    env_file:
+      - .env
+    depends_on:
+      - mongo-db
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
@@ -25,3 +27,29 @@ services:
     tty: true
     depends_on:
       - backend
+
+  data-pipeline:
+    build:
+      context: ./data_pipeline
+      dockerfile: Dockerfile
+    container_name: xtock-pipeline
+    volumes:
+      - ./:/app
+    env_file:
+      - .env
+    ports:
+      - "8001:8000"
+
+
+  mongo-db:
+    image: mongo:latest
+    container_name: xtock-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - default
+
+volumes:
+  mongo_data:           
