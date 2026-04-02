@@ -11,6 +11,7 @@ import {
   BookOpen,
   Activity,
   History,
+  Coins,
   LogOut // [추가] 로그아웃 아이콘
 } from "lucide-react";
 
@@ -21,6 +22,7 @@ import HistoricalImpactSection from "@/components/HistoricalImpactSection";
 import LearningCenter from "@/components/LearningCenter";
 import PortfolioSection from "@/components/PortfolioSection";
 import SettingsSection from "@/components/SettingsSection";
+import StockSimulationSection from "@/components/StockSimulationSection";
 
 // API 유틸리티 import
 import api from "../utils/api";
@@ -95,11 +97,12 @@ export default function Home() {
     { id: "historical", icon: History, label: "과거 영향 분석" },
     { id: "learn", icon: BookOpen, label: "학습 센터" },
     { id: "portfolio", icon: User, label: "내 포트폴리오" },
+    { id: "simulation", icon: Coins, label: "주식 시뮬레이션" },
     { id: "settings", icon: Settings, label: "설정" },
   ];
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100">
+    <div className="flex h-[100dvh] min-h-0 bg-slate-950 text-slate-100">
 
       {/* 모바일 메뉴 버튼 */}
       <button
@@ -111,7 +114,7 @@ export default function Home() {
 
       {/* 사이드바 */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-40 w-64 bg-slate-900 border-r border-slate-800 flex flex-col transition-transform duration-300 ${
+        className={`fixed lg:static inset-y-0 left-0 z-40 w-64 shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col min-h-0 overflow-y-auto transition-transform duration-300 ${
           isMobileMenuOpen
             ? "translate-x-0"
             : "-translate-x-full lg:translate-x-0"
@@ -173,7 +176,7 @@ export default function Home() {
       </aside>
 
       {/* 메인 컨텐츠 */}
-      <main className="flex-1 overflow-auto custom-scrollbar">
+      <main className="flex-1 min-h-0 min-w-0 overflow-y-auto custom-scrollbar">
         {/* 상단 서비스 타이틀 (XtockXignal 로고) */}
         <div className="w-full text-center mt-6">
           <h1 className="inline-flex items-center gap-2 font-extrabold select-none">
@@ -195,6 +198,7 @@ export default function Home() {
                 {activeMenu === "historical" && "과거 영향 분석"}
                 {activeMenu === "learn" && "학습 센터"}
                 {activeMenu === "portfolio" && "내 포트폴리오"}
+                {activeMenu === "simulation" && "주식 시뮬레이션"}
                 {activeMenu === "settings" && "설정"}
               </h1>
               <p className="text-sm text-slate-400 font-medium">
@@ -207,6 +211,7 @@ export default function Home() {
               {activeMenu === "historical" && "과거 주가에 영향을 미쳤던 결정적 트윗 학습"}
               {activeMenu === "learn" && "주식 기초, 기술적·기본적 분석, AI 기반 투자 학습"}
               {activeMenu === "portfolio" && "나의 관심 종목 및 포트폴리오 관리"}
+              {activeMenu === "simulation" && "가상 현금으로 매수/매도 경험 시뮬레이션"}
               {activeMenu === "settings" && "앱 설정 및 개인화"}
             </p>
           </header>
@@ -218,6 +223,7 @@ export default function Home() {
             {activeMenu === "historical" && <HistoricalImpactSection />}
             {activeMenu === "learn" && <LearningCenter />}
             {activeMenu === "portfolio" && <PortfolioSection />}
+            {activeMenu === "simulation" && <StockSimulationSection />}
             {activeMenu === "settings" && <SettingsSection />}
           </div>
         </div>

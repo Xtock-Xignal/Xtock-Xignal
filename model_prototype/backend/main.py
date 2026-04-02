@@ -10,7 +10,7 @@ import yfinance as yf
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pymongo import MongoClient
 from passlib.context import CryptContext
 import random
@@ -290,10 +290,12 @@ if MONGODB_URI:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    load_data()
+    # load_data()
+    global mongo_client
+    mongo_client = MongoClient("mongodb://xtock-mongodb:27017")
     print("XTock-Xignal Backend Starting")
     yield
-    print("XTock-Xignal Backend Shutting Down")
+    # print("XTock-Xignal Backend Shutting Down")
     if mongo_client:
         mongo_client.close()
     
@@ -340,6 +342,23 @@ class ChartRequest(BaseModel):
     
 class SearchRequest(BaseModel):
     text: str
+    # 시뮬/차트용 일봉 개수(최근 N개). start_date/end_date가 주어지지 않았을 때 사용합니다.
+    stock_history_days: Optional[int] = Field(default=None, ge=5, le=400)
+    # YYYY-MM-DD 형식의 시작일/종료일(기간 조회용). 둘 다 필요합니다.
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+
+
+def parse_iso_date(date_str: str) -> dt.date:
+    """
+    YYYY-MM-DD 문자열을 dt.date로 변환합니다.
+    """
+    # datetime.fromisoformat은 "YYYY-MM-DD" 외 포맷에 관대할 수 있어서,
+    # 여기서는 명시적으로 포맷을 고정합니다.
+    try:
+        return dt.datetime.strptime(date_str, "%Y-%m-%d").date()
+    except Exception as e:
+        raise ValueError(f"Invalid date: {date_str}") from e
 
 # ===========================================
 # X API 호출 함수
@@ -400,7 +419,9 @@ def get_fallback_tweets(query):
 def get_stock_price_history(symbol: str, days: int = 30):
     try:
         end_date = dt.datetime.now()
-        start_date = end_date - dt.timedelta(days = days + 20)
+        # 일봉 `days`개를 확보하려면 주말·휴장을 감안해 달력 구간을 넉넉히 잡음
+        cal_lookback = max(days + 100, int(days * 1.75))
+        start_date = end_date - dt.timedelta(days=cal_lookback)
         df = yf.download(symbol, start=start_date, end=end_date, interval="1d", progress=False, multi_level_index=False)
         if df.empty: return []
         
@@ -420,6 +441,61 @@ def get_stock_price_history(symbol: str, days: int = 30):
             })
         return records[-days:]
     except: return []
+
+
+def get_stock_price_history_range(symbol: str, start_date_str: str, end_date_str: str):
+    """
+    start_date ~ end_date (둘 다 포함) 기간의 OHLCV를 반환합니다.
+    """
+    try:
+        start_d = parse_iso_date(start_date_str)
+        end_d = parse_iso_date(end_date_str)
+
+        if end_d < start_d:
+            return []
+
+        # yfinance의 end 파라미터는 일반적으로 "exclusive"에 가깝기 때문에
+        # 종료일을 하루 더해서 마지막 거래일이 포함되도록 합니다.
+        df = yf.download(
+            symbol,
+            start=start_d.isoformat(),
+            end=(end_d + dt.timedelta(days=1)).isoformat(),
+            interval="1d",
+            progress=False,
+            multi_level_index=False,
+        )
+        if df.empty:
+            return []
+
+        df = df.reset_index()
+        date_col = 'Date' if 'Date' in df.columns else df.columns[0]
+
+        records = []
+        for _, row in df.iterrows():
+            if pd.isna(row[date_col]):
+                continue
+
+            d_str = pd.to_datetime(row[date_col]).strftime("%Y-%m-%d")
+            d_d = dt.datetime.strptime(d_str, "%Y-%m-%d").date()
+            if d_d < start_d or d_d > end_d:
+                continue
+
+            records.append({
+                "date": d_str,
+                "open": float(row.get("Open", 0)),
+                "high": float(row.get("High", 0)),
+                "low": float(row.get("Low", 0)),
+                "close": float(row.get("Close", 0)),
+                "volume": int(row.get("Volume", 0)),
+            })
+
+        # yfinance 결과는 보통 날짜 오름차순이지만,
+        # 혹시 몰라 날짜 기준으로 한 번 더 정렬합니다.
+        records.sort(key=lambda r: r["date"])
+        return records
+    except Exception as e:
+        print(f"[StockRange] Error: {e}")
+        return []
 
 # def infer_base_date_from_tweet_created_at(created_at: str) -> dt.date:
 #     """트윗 작성 시간(ISO8601) -> 날짜(Date) 변환"""
@@ -677,7 +753,43 @@ async def get_recent_status(payload: SearchRequest):
         
     # 데이터 조회
     tweets = await call_x_recent_search(twitter_query, max_results=3)
-    stock_data = get_stock_price_history(ticker, days=20)
+    if (payload.start_date is not None) or (payload.end_date is not None):
+        # 기간 조회는 start_date/end_date 둘 다 필요합니다.
+        if payload.start_date is None or payload.end_date is None:
+            return {
+                "found": False,
+                "msg": "start_date와 end_date를 모두 지정해주세요.",
+                "symbol": ticker,
+                "tweets": tweets,
+                "stock_data": [],
+            }
+
+        try:
+            # 날짜 파싱 및 기본 검증
+            _ = parse_iso_date(payload.start_date)
+            _ = parse_iso_date(payload.end_date)
+        except Exception:
+            return {
+                "found": False,
+                "msg": "날짜 형식은 YYYY-MM-DD로 입력해주세요.",
+                "symbol": ticker,
+                "tweets": tweets,
+                "stock_data": [],
+            }
+
+        stock_data = get_stock_price_history_range(ticker, payload.start_date, payload.end_date)
+    else:
+        hist_days = payload.stock_history_days if payload.stock_history_days is not None else 100
+        stock_data = get_stock_price_history(ticker, days=hist_days)
+
+    if not stock_data:
+        return {
+            "found": False,
+            "msg": "해당 기간의 주가 데이터를 불러올 수 없습니다.",
+            "symbol": ticker,
+            "tweets": tweets,
+            "stock_data": [],
+        }
     
     return {
         "found": True,
