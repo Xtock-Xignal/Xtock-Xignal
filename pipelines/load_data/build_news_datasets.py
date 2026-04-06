@@ -12,6 +12,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tqdm import tqdm
+
 ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
@@ -25,28 +27,31 @@ from utils.yaml_config import load_string_mapping  # noqa: E402
 
 
 DATASETS_DIR = ensure_dir(ROOT_DIR / "datasets")
-RAW_DATASET_PATH = DATASETS_DIR / "raw_news.csv"
-FASTTEXT_DATASET_PATH = DATASETS_DIR / "news_fastText.csv"
-TFIDF_DATASET_PATH = DATASETS_DIR / "news_tfidf.csv"
+RAW_DATASET_PATH = DATASETS_DIR / "news_raw.csv"
+# FASTTEXT_DATASET_PATH = DATASETS_DIR / "news_fastText.csv"
+# TFIDF_DATASET_PATH = DATASETS_DIR / "news_tfidf.csv"
 GICS_SECTORS = load_string_mapping(ROOT_DIR / "config" / "gics_sectors.yaml", "gics_sectors")
 
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3-pro-preview"
 DEFAULT_GEMINI_KEY_PATH = ROOT_DIR / "geminiAPI.txt"
-DEFAULT_TICKER_COMPANIES = OrderedDict(
-    {
-        "XOM": "Exxon Mobil",
-        "LIN": "Linde",
-        "CAT": "Caterpillar",
-        "NEE": "NextEra Energy",
-        "JNJ": "Johnson & Johnson",
-        "JPM": "JPMorgan Chase",
-        "AMZN": "Amazon",
-        "PG": "Procter & Gamble",
-        "MSFT": "Microsoft",
-        "GOOGL": "Alphabet",
-        "PLD": "Prologis",
-    }
-)
+try:
+    DEFAULT_TICKER_COMPANIES = load_string_mapping(ROOT_DIR / "config" / "snp500.yaml", "default_ticker_companies")
+except (FileNotFoundError, ValueError):
+    DEFAULT_TICKER_COMPANIES = OrderedDict(
+        {
+            "XOM": "Exxon Mobil",
+            "LIN": "Linde",
+            "CAT": "Caterpillar",
+            "NEE": "NextEra Energy",
+            "JNJ": "Johnson & Johnson",
+            "JPM": "JPMorgan Chase",
+            "AMZN": "Amazon",
+            "PG": "Procter & Gamble",
+            "MSFT": "Microsoft",
+            "GOOGL": "Alphabet",
+            "PLD": "Prologis",
+        }
+    )
 
 
 @dataclass(frozen=True)
@@ -60,10 +65,10 @@ class NewsRecord:
     publisher: str
     link: str
     published_at: str
-    gemini_sector: str
-    gemini_rationale: str
     retrieval_query: str
     retrieved_at: str
+    gemini_sector: str = ""
+    gemini_rationale: str = ""
 
 
 def build_argument_parser() -> argparse.ArgumentParser:
@@ -225,15 +230,20 @@ def classify_article(client: Any, model_name: str, article_text: str) -> tuple[s
     return sector, rationale
 
 
-def build_raw_records(client: Any, tickers: list[str], news_per_ticker: int, gemini_model: str) -> list[NewsRecord]:
-    """뉴스 수집과 Gemini 분류 결과를 raw 레코드로 변환한다."""
+def build_raw_records(tickers: list[str], news_per_ticker: int) -> list[NewsRecord]:
+    """뉴스 수집을 수행하여 raw 레코드로 변환한다. (Gemini 분류 제외)"""
     records: list[NewsRecord] = []
     retrieved_at = _now_iso()
 
-    for ticker in tickers:
+    pbar = tqdm(tickers, desc="Collecting news")
+    total_found = 0
+    for ticker in pbar:
         company_name = DEFAULT_TICKER_COMPANIES.get(ticker, ticker)
         query = f"{ticker} {company_name}"
-        for item in collect_news_items(query=query, ticker=ticker, news_count=news_per_ticker)[:news_per_ticker]:
+        
+        current_ticker_news = collect_news_items(query=query, ticker=ticker, news_count=news_per_ticker)[:news_per_ticker]
+        
+        for item in current_ticker_news:
             title = str(item.get("title", "")).strip()
             summary = str(item.get("summary", "")).strip()
             article_text = build_article_text(item)
@@ -241,7 +251,7 @@ def build_raw_records(client: Any, tickers: list[str], news_per_ticker: int, gem
                 continue
 
             link = _extract_link(item)
-            sector, rationale = classify_article(client=client, model_name=gemini_model, article_text=article_text)
+            # sector, rationale = classify_article(client=client, model_name=gemini_model, article_text=article_text)
             records.append(
                 NewsRecord(
                     article_id=build_article_id(ticker=ticker, link=link, title=title),
@@ -253,12 +263,15 @@ def build_raw_records(client: Any, tickers: list[str], news_per_ticker: int, gem
                     publisher=str(item.get("publisher") or item.get("provider") or "").strip(),
                     link=link,
                     published_at=_to_iso8601(item.get("providerPublishTime") or item.get("pubDate")),
-                    gemini_sector=sector,
-                    gemini_rationale=rationale,
+                    # gemini_sector=sector,
+                    # gemini_rationale=rationale,
                     retrieval_query=query,
                     retrieved_at=retrieved_at,
                 )
             )
+            total_found += 1
+            
+        pbar.set_postfix({"ticker": ticker, "total": total_found})
 
     return list(OrderedDict((record.article_id, record) for record in records).values())
 
@@ -276,11 +289,11 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def build_raw_rows(records: list[NewsRecord]) -> list[dict[str, str]]:
-    """원문 텍스트와 라벨만 포함한 최소 raw 데이터 행을 만든다."""
+    """원문 텍스트만 포함한 raw 데이터 행을 만든다."""
     return [
         {
             "text": record.article_text,
-            "label": record.gemini_sector,
+            # "label": record.gemini_sector,
         }
         for record in records
         if record.article_text
@@ -327,42 +340,40 @@ def build_tfidf_rows(records: list[NewsRecord]) -> list[dict[str, Any]]:
 
 def validate_output_paths(overwrite: bool) -> None:
     """기존 출력 파일 존재 여부를 확인한다."""
-    for path in (RAW_DATASET_PATH, FASTTEXT_DATASET_PATH, TFIDF_DATASET_PATH):
+    for path in (RAW_DATASET_PATH,):
         if path.exists() and not overwrite:
             raise FileExistsError(f"{path} already exists. Use --overwrite to replace it.")
 
 
 def main() -> None:
-    """뉴스 수집, Gemini 분류, 전처리 CSV 생성을 순차 실행한다."""
+    """뉴스 수집 및 전처리 CSV 생성을 실행한다. (Gemini 분류 비활성화)"""
     args = build_argument_parser().parse_args()
     validate_output_paths(overwrite=args.overwrite)
 
-    api_key = load_gemini_api_key()
-
-    genai = _load_gemini_client()
-    client = genai.Client(api_key=api_key)
+    # api_key = load_gemini_api_key()
+    # genai = _load_gemini_client()
+    # client = genai.Client(api_key=api_key)
     try:
         records = build_raw_records(
-            client=client,
             tickers=args.tickers,
             news_per_ticker=args.news_per_ticker,
-            gemini_model=args.gemini_model,
         )
     finally:
-        close = getattr(client, "close", None)
-        if callable(close):
-            close()
+        pass
+        # close = getattr(client, "close", None)
+        # if callable(close):
+        #     close()
 
     if not records:
         raise ValueError("No news records were collected.")
 
     write_csv(RAW_DATASET_PATH, build_raw_rows(records))
-    write_csv(FASTTEXT_DATASET_PATH, build_fasttext_rows(records))
-    write_csv(TFIDF_DATASET_PATH, build_tfidf_rows(records))
+    # write_csv(FASTTEXT_DATASET_PATH, build_fasttext_rows(records))
+    # write_csv(TFIDF_DATASET_PATH, build_tfidf_rows(records))
 
     print(f"saved raw dataset: {RAW_DATASET_PATH}")
-    print(f"saved fastText dataset: {FASTTEXT_DATASET_PATH}")
-    print(f"saved tf-idf dataset: {TFIDF_DATASET_PATH}")
+    # print(f"saved fastText dataset: {FASTTEXT_DATASET_PATH}")
+    # print(f"saved tf-idf dataset: {TFIDF_DATASET_PATH}")
     print(f"records: {len(records)}")
 
 
