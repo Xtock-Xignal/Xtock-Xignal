@@ -1,0 +1,34 @@
+# 서버 구동용
+fastapi
+uvicorn
+requests
+pydantic
+pydantic[email]
+python-dotenv
+httpx
+websockets
+
+# 데이터 처리 및 AI 용
+pandas
+numpy
+yfinance
+chromadb
+sentence-transformers
+torch
+# optuna
+tqdm
+
+# DB 및 인증 처리
+pymongo
+passlib
+bcrypt==4.0.1
+
+# 크롤링 및 번역 파이프라인
+newspaper3k
+lxml_html_clean
+googletrans==4.0.0-rc1
+beautifulsoup4
+
+# 테스트 의존성
+pytest
+pytest-cov

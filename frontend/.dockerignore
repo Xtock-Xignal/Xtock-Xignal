@@ -1,0 +1,18 @@
+# Dependency directories
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Version control
+.git/
+.gitignore
+
+# Environment variables
+.env
+.env.local

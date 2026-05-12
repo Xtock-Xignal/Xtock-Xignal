@@ -1,0 +1,27 @@
+# 1. 보안키
+.env
+api_keys.py
+secrets.py
+
+# 2. 대용량 데이터 & 생성된 DB (깃허브 용량 문제로 안올라가는 부분)
+chroma_db/
+*.csv
+*.json
+data_pipeline/*.jsonl
+backend/chromaDB/
+archive/benchmark/chroma_db
+archive/benchmark/chroma_db_bge
+archive/benchmark/chroma_db_mini
+
+# 3. 파이썬/노드 찌꺼기
+__pycache__/
+*.pyc
+node_modules/
+build/
+.DS_Store
+.ipynb_checkpoints/
+
+# 4. 가상 환경
+venv/
+env/
+.venv/
