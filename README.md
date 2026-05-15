@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./assets/logo.png" alt="XTock-Xignal Logo" width="200"/>
+  <img src="./docs/logo.png" alt="XTock-Xignal Logo" width="200"/>
 
   # XTock-Xignal
 
