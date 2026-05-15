@@ -10,7 +10,7 @@ websockets
 
 # 데이터 처리 및 AI 용
 pandas
-numpy
+numpy<2.0
 yfinance
 chromadb
 sentence-transformers
@@ -28,6 +28,8 @@ newspaper3k
 lxml_html_clean
 googletrans==4.0.0-rc1
 beautifulsoup4
+google-genai
+feedparser
 
 # 테스트 의존성
 pytest

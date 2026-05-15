@@ -2,8 +2,6 @@ import os
 import datetime as dt
 from contextlib import asynccontextmanager
 import json
-import csv
-import httpx
 import pandas as pd
 import yfinance as yf
 from fastapi import FastAPI, Query
@@ -12,23 +10,17 @@ from dotenv import load_dotenv
 from pymongo import MongoClient
 from passlib.context import CryptContext
 
-from search_service import search_engine
 from app import api as api_routers
 from app.services import backtest_service
 
+from app.api.terms import router as terms_router
+from app.api.news import router as news_router
 load_dotenv()
 
-BEARER_TOKEN = os.getenv("BEARER_TOKEN") or os.getenv("TWEETER_BEARER_TOKEN")
-if not BEARER_TOKEN:
-    print("Warning: BEARER_TOKEN is not set in .env")
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CSV_PATH = os.path.join(BASE_DIR, "stock_tweets.csv")
-SP500_HANDLES_PATH = os.path.join(BASE_DIR, "sp500_handles.json")
 
-
-IMPACT_TWEETS = []
-SP500_HANDLES = {}
+MONGO_URI = os.getenv("MONGODB_URI", "mongodb://xtock-mongodb:27017")
+mongo_client = MongoClient(MONGO_URI)
 
 NAME_TO_TICKER = {
     # ---------------------------------------------------------
@@ -159,121 +151,24 @@ NAME_TO_TICKER = {
     "UNITY": "U", "유니티": "U"
 }
 
-def load_data():
-    """데이터 로드 및 AI 엔진 인덱싱"""
-    global IMPACT_TWEETS, SP500_HANDLES
-    
-    # 1. CSV 로드
-    if os.path.exists(CSV_PATH):
-        try:
-            with open(CSV_PATH, 'r', encoding='utf-8') as f:
-                reader = csv.reader(f)
-                IMPACT_TWEETS = []
-                
-                # AI 검색을 위한 데이터 준비
-                documents = []
-                ids = []
-                metadatas = []
-                
-                for i, row in enumerate(reader):
-                    if i == 0 and "Date" in row[0]:
-                        continue
-                    if len(row) < 3: continue
-                    
-                    try:
-                        date_str = row[0]
-                        
-                        # 행의 길이가 4개보다 많으면(쉼표로 인해 쪼개짐), 중간을 모두 텍스트로 합침
-                        if len(row) > 4:
-                            symbol = row[-2].strip().upper()
-                            company = row[-1]
-                            # row[1]부터 row[-2] 전까지가 텍스트
-                            text = ",".join(row[1:-2]).replace('"', '').strip()
-                        else:
-                            # 일반적인 경우 (Date, Text, Symbol, Company)
-                            text = row[1]
-                            symbol = row[2].strip().upper()
-                            company = row[3] if len(row) > 3 else "Unknown"
-                        
-                        # 심볼에 이상한 문자가 섞였는지 방어적 체크
-                        if len(symbol) > 6 or " " in symbol:
-                            continue
-
-                        tweet_obj = {
-                            "id": f"csv_{i}",
-                            "symbol": symbol,
-                            "text": text,
-                            "created_at": date_str,
-                            "author_id": company,
-                            "note": f"Historical Event ({date_str[:10]})"
-                        }
-                        IMPACT_TWEETS.append(tweet_obj)
-                        
-                        # AI 엔진 데이터 (최대 5000개)
-                        if i < 5000:
-                            ids.append(tweet_obj["id"])
-                            documents.append(f"{text} {symbol}")
-                            metadatas.append({"symbol": symbol, "name": symbol})
-                            
-                    except Exception as parse_err:
-                        # 파싱 에러난 행은 건너뜀
-                        continue
-
-            print(f"[Data] Loaded {len(IMPACT_TWEETS)} historical tweets from CSV.")
-            
-            # [디버깅] TSLA 데이터가 실제로 들어갔는지 확인
-            tsla_count = sum(1 for t in IMPACT_TWEETS if t['symbol'] == 'TSLA')
-            print(f"[Data Debug] 'TSLA' count in memory: {tsla_count}")
-            
-            # AI 엔진(ChromaDB)에 데이터 주입
-            if search_engine.col_static and documents:
-                print(f"[AI] Indexing {len(documents)} documents to Vector DB...")
-                # 기존 데이터가 있으면 중복 방지를 위해 확인하거나, 간단히 try-except 처리
-                try:
-                    # 임베딩 생성 (search_service 내부 모델 사용)
-                    embeddings = search_engine.model.encode(documents).tolist()
-                    search_engine.col_static.upsert(
-                        ids=ids,
-                        embeddings=embeddings,
-                        documents=documents,
-                        metadatas=metadatas
-                    )
-                    print("[AI] Indexing Complete!")
-                except Exception as e:
-                    print(f"[AI] Indexing Warning: {e}")
-                    
-        except Exception as e:
-            print(f"[Data] Failed to load CSV: {e}")
-    else:
-        print("[Data] Tweet.csv not found!")
-    
-    # 2. 핸들 로드
-    if os.path.exists(SP500_HANDLES_PATH):
-        try:
-            with open(SP500_HANDLES_PATH, 'r', encoding='utf-8') as f:
-                SP500_HANDLES = json.load(f)
-            print(f"[Data] Loaded {len(SP500_HANDLES)} handles.")
-        except: pass
-    
-MONGODB_URI = os.getenv("MONGODB_URI")
-MONGODB_NAME = os.getenv("MONGODB_NAME", "xtock")
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://xtock-mongodb:27017") # 기본 주소 강제 주입!
+MONGODB_NAME = os.getenv("MONGODB_NAME", "xtock_xignal") # 진짜 DB 이름 강제 주입!
 MONGODB_COLLECTION_LOGS = "search_history"
 
 mongo_client = None
 search_log_col = None
 
-if MONGODB_URI:
-    try:
-        mongo_client = MongoClient(MONGODB_URI)
-        db = mongo_client[MONGODB_NAME]
-        search_log_col = db[MONGODB_COLLECTION_LOGS]
-        print("[DB] MongoDB Connected for Logging.")
-    except Exception as e:
-        print(f"[DB] Connection Failed: {e}")
+try:
+    # if문 없애버리고 무조건 연결 시도!
+    mongo_client = MongoClient(MONGODB_URI)
+    db = mongo_client[MONGODB_NAME]
+    search_log_col = db[MONGODB_COLLECTION_LOGS]
+    print("[DB] MongoDB Connected Successfully.")
+except Exception as e:
+    print(f"[DB] Connection Failed: {e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    load_data()
     print("XTock-Xignal Backend Starting")
     yield
     print("XTock-Xignal Backend Shutting Down")
@@ -298,7 +193,7 @@ app.add_middleware(
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def get_user_collection():
-    return mongo_client["xtock_db"]["users"]
+    return mongo_client["xtock_xignal"]["users"]
 
 # 비밀번호 관련 함수
 def verify_password(plain_password, hashed_password):
@@ -312,77 +207,6 @@ BacktestPosition = backtest_service.BacktestPosition
 BacktestRequest = backtest_service.BacktestRequest
 BacktestSymbolItem = backtest_service.BacktestSymbolItem
 
-# ===========================================
-# X API Call Function (Modified for Robustness & Logging)
-# ===========================================
-async def call_x_recent_search(query: str, max_results: int = 10):
-    if not BEARER_TOKEN:
-        print("⚠️ [X API] No Bearer Token found. Using fallback data.")
-        return get_fallback_tweets(query)    
-    
-    base_url = "https://api.x.com/2/tweets/search/recent"
-    headers = {"Authorization": f"Bearer {BEARER_TOKEN}"}
-    final_query = f"({query}) -is:retweet"
-
-    params = {
-        "query": final_query,
-        "max_results": max_results,
-        "tweet.fields": "created_at,author_id,public_metrics,lang",
-        "expansions": "author_id",
-        "user.fields": "name,username"
-    }
-    
-    try:        
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(base_url, headers=headers, params=params)
-
-        # 1. Rate Limit (429) Check
-        if resp.status_code == 429:
-            print(f"⚠️ [X API] Rate Limit Exceeded (429). Returning fallback tweets for '{query}'.")
-            return get_fallback_tweets(query)
-
-        # 2. Success (200)
-        if resp.status_code == 200:
-            data = resp.json()
-            tweets = data.get("data", [])
-            
-            if not tweets:
-                print(f"ℹ️ [X API] No tweets found for '{query}'. Returning fallback.")
-                return get_fallback_tweets(query)
-
-            users = {u["id"]: u for u in data.get("includes", {}).get("users", [])}
-            result = []
-            for t in tweets:
-                author_info = users.get(t["author_id"], {})
-                result.append({
-                    "id": t["id"],
-                    "text": t["text"],
-                    "author": author_info.get("name", "Unknown"),
-                    "username": author_info.get("username", ""),
-                    "date": t["created_at"].split("T")[0],
-                    "created_at": t["created_at"]
-                })
-            return result
-
-        # 3. Other Errors
-        else:
-            print(f"❌ [X API] Failed with status {resp.status_code}: {resp.text}")
-            return get_fallback_tweets(query)
-
-    except Exception as e:
-        # Network errors, timeout, etc.
-        print(f"❌ [X API] Connection Error: {e}")
-        return get_fallback_tweets(query)
-    
-def get_fallback_tweets(query):
-    today = dt.datetime.now().strftime("%Y-%m-%d")
-    return [
-        {"text": f"Latest market update regarding {query}. Analysts are watching closely.", "author": "MarketWatch", "username": "MarketWatch", "date": today},
-        {"text": f"Breaking news: {query} shows significant movement today.", "author": "Bloomberg", "username": "Bloomberg", "date": today},
-        {"text": "Investors are reacting to the latest earnings report.", "author": "CNBC", "username": "CNBC", "date": today}
-    ]
-    
-    
 def get_stock_price_history(symbol: str, days: int = 30):
     try:
         end_date = dt.datetime.now()
@@ -417,7 +241,7 @@ def _normalize_symbol_name(raw: str):
 
 
 def _get_backtest_symbol_catalog():
-    return backtest_service.get_backtest_symbol_catalog(NAME_TO_TICKER, SP500_HANDLES, _normalize_symbol_name)
+    return backtest_service.get_backtest_symbol_catalog(NAME_TO_TICKER, _normalize_symbol_name)
 
 
 def _get_backtest_symbol_detail(raw_symbol: str):
@@ -488,16 +312,7 @@ app.include_router(
 app.include_router(
     api_routers.create_market_router(
         name_to_ticker=NAME_TO_TICKER,
-        sp500_handles=SP500_HANDLES,
-        call_x_recent_search=call_x_recent_search,
         get_stock_price_history=get_stock_price_history,
-    )
-)
-app.include_router(
-    api_routers.create_historical_router(
-        search_engine=search_engine,
-        impact_tweets_ref=IMPACT_TWEETS,
-        stock_price_downloader=_download_stock_history_for_historical_chart,
     )
 )
 app.include_router(
@@ -510,6 +325,17 @@ app.include_router(
         yf_module=yf,
     )
 )
+
+app.include_router(
+    terms_router,
+    prefix="/api/terms",
+    tags=["Financial Terms"]
+)
+
+app.include_router(
+    news_router, 
+    prefix="/api/news",
+    tags=["news"])
 
 @app.post("/api/backtest/run")
 def run_backtest(payload: BacktestRequest):

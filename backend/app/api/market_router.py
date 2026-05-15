@@ -10,7 +10,7 @@ class SearchRequest(BaseModel):
     text: str
 
 
-def create_market_router(name_to_ticker, sp500_handles, call_x_recent_search, get_stock_price_history):
+def create_market_router(name_to_ticker, get_stock_price_history):
     router = APIRouter()
 
     @router.post("/api/recent-status")
@@ -18,8 +18,6 @@ def create_market_router(name_to_ticker, sp500_handles, call_x_recent_search, ge
         return await market_service.get_recent_status(
             payload,
             name_to_ticker=name_to_ticker,
-            sp500_handles=sp500_handles,
-            search_fn=call_x_recent_search,
             stock_history_fn=get_stock_price_history,
         )
 
