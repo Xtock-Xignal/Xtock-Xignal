@@ -54,20 +54,15 @@ def normalize_symbol_name(raw: str) -> Optional[str]:
 
 def get_backtest_symbol_catalog(
     name_to_ticker: Dict[str, str],
-    sp500_handles: Dict[str, str],
     normalize_fn: Callable[[str], Optional[str]] = normalize_symbol_name,
 ) -> List[dict]:
     catalog = {}
 
     for symbol in set(name_to_ticker.values()):
         if symbol and len(symbol) <= 8:
-            catalog[symbol] = catalog.get(symbol, symbol)
-
-    for symbol, query in sp500_handles.items():
-        if not symbol:
-            continue
-        if symbol not in catalog:
-            catalog[symbol] = normalize_fn(query) or symbol
+            name = next((k for k, v in name_to_ticker.items() if v == symbol), symbol)
+            catalog[symbol] = name
+    
 
     return sorted(
         [{"symbol": symbol, "name": name} for symbol, name in catalog.items()],

@@ -12,17 +12,19 @@ import {
   Activity,
   History,
   BarChart3,
-  LogOut // [추가] 로그아웃 아이콘
+  LogOut,
+  Newspaper
 } from "lucide-react";
+
+import { useSearchParams } from "next/navigation";
 
 import LoginPage from "@/features/auth/LoginPage";
 import DashboardSection from "@/features/dashboard/DashboardSection";
-import RecentStatusSection from "@/features/recent/RecentStatusSection";
-import HistoricalImpactSection from "@/features/historical/HistoricalImpactSection";
 import LearningCenter from "@/features/learn/LearningCenter";
 import BacktestSection from "@/features/backtest/BacktestSection";
 import PortfolioSection from "@/features/portfolio/PortfolioSection";
 import SettingsSection from "@/features/settings/SettingsSection";
+import NewsSimulatorSection from "@/features/simulator/NewsSimulatorSection";
 
 // API 유틸리티 import
 import api from "../utils/api";
@@ -66,6 +68,9 @@ const isAuthValid = (raw) => {
 };
 
 export default function Home() {
+
+  const searchParams = useSearchParams();
+
   // [수정] 로그인 상태 관리 (기본값 null)
   const [user, setUser] = useState(null); 
   const [isAuthChecking, setIsAuthChecking] = useState(true);
@@ -78,6 +83,14 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
+
+  useEffect(() => {
+    const tabFromUrl = searchParams.get("tab");
+    if (tabFromUrl) {
+      // url에 ?tab=dashboard 등이 들어오면 해당 화면으로 즉시 전환
+      setActiveMenu(tabFromUrl); 
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     setTodayDate(new Date().toLocaleDateString("ko-KR", {
@@ -187,8 +200,7 @@ export default function Home() {
 
   const menuItems = [
     { id: "dashboard", icon: LayoutDashboard, label: "대시보드" },
-    { id: "recent", icon: Activity, label: "최근 기업 근황" },
-    { id: "historical", icon: History, label: "과거 영향 분석" },
+    { id: "simulator", icon: Newspaper, label: "뉴스 시뮬레이터" },
     { id: "learn", icon: BookOpen, label: "학습 센터" },
     { id: "backtest", icon: BarChart3, label: "백테스팅" },
     { id: "portfolio", icon: User, label: "모의 투자(포트폴리오)" },
@@ -296,8 +308,7 @@ export default function Home() {
             <div className="flex items-center justify-between mb-2">
               <h1 className="text-3xl md:text-4xl font-extrabold text-white">
                 {activeMenu === "dashboard" && "메인 대시보드"}
-                {activeMenu === "recent" && "최근 기업 근황"}
-                {activeMenu === "historical" && "과거 영향 분석"}
+                {activeMenu === "simulator" && "뉴스 시뮬레이터"}
                 {activeMenu === "learn" && "학습 센터"}
                 {activeMenu === "backtest" && "백테스팅"}
                 {activeMenu === "portfolio" && "내 포트폴리오"}
@@ -309,8 +320,7 @@ export default function Home() {
             </div>
             <p className="text-sm md:text-base text-slate-400">
               {activeMenu === "dashboard" && "오늘의 시장 동향 및 예측 요약"}
-              {activeMenu === "recent" && "관심 기업의 실시간 공식 트윗과 주가 흐름 모니터링"}
-              {activeMenu === "historical" && "과거 주가에 영향을 미쳤던 결정적 트윗 학습"}
+              {activeMenu === "simulator" && "과거 경제 뉴스를 통한 시장 반응 학습 및 AI 금융 사전"}
               {activeMenu === "learn" && "주식 기초, 기술적·기본적 분석, AI 기반 투자 학습"}
               {activeMenu === "backtest" && "과거 데이터를 활용한 전략 검증"}
               {activeMenu === "portfolio" && "나의 관심 종목 및 포트폴리오 관리"}
@@ -338,8 +348,7 @@ export default function Home() {
               </section>
             )}
             {activeMenu === "dashboard" && <DashboardSection />}
-            {activeMenu === "recent" && <RecentStatusSection user={user} />}
-            {activeMenu === "historical" && <HistoricalImpactSection />}
+            {activeMenu === "simulator" && <NewsSimulatorSection />}
             {activeMenu === "learn" && <LearningCenter />}
             {activeMenu === "backtest" && <BacktestSection />}
             {activeMenu === "portfolio" && <PortfolioSection user={user} />}

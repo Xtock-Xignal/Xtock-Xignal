@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import api from "../utils/api";
 import { SP500_LIST } from "../data/sp500_list";
 import { 
@@ -8,6 +9,8 @@ import {
 import { TrendingUp, TrendingDown, ChevronDown, ChevronUp, Search, Activity, DollarSign, BarChart3 } from 'lucide-react';
 
 export default function DashboardSection() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [marketData, setMarketData] = useState(null);
   const [loading, setLoading] = useState(true);
   
@@ -34,23 +37,7 @@ export default function DashboardSection() {
     fetchDashboard();
   }, []);
 
-  const filteredList = SP500_LIST.filter(item => 
-    item.symbol.includes(searchTerm.toUpperCase()) || 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  
-  const totalPages = Math.ceil(filteredList.length / ITEMS_PER_PAGE);
-  const currentList = filteredList.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE, 
-    currentPage * ITEMS_PER_PAGE
-  );
-
-  const handleRowClick = async (symbol) => {
-    if (expandedSymbol === symbol) {
-      setExpandedSymbol(null); 
-      return;
-    }
-
+  const fetchStockDetail = async (symbol) => {
     setExpandedSymbol(symbol);
     setLoadingDetail(true);
     setExpandedStockData(null);
@@ -62,9 +49,48 @@ export default function DashboardSection() {
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setLoadingDetail(false);
     }
-    setLoadingDetail(false);
   };
+
+  // 기존 클릭 핸들러는 분리한 함수를 가져다 쓰도록 수정
+  const handleRowClick = (symbol) => {
+    if (expandedSymbol === symbol) {
+      setExpandedSymbol(null); 
+      return;
+    }
+    fetchStockDetail(symbol);
+  };
+
+  // [신규] 뉴스에서 넘어온 URL 파라미터(ticker) 감지 및 자동 실행
+  useEffect(() => {
+    const ticker = searchParams.get("ticker");
+    if (ticker) {
+      const targetSymbol = ticker.toUpperCase();
+      
+      // 1. 검색창에 티커를 입력하여 리스트 최상단에 해당 종목만 남김
+      setSearchTerm(targetSymbol);
+      setCurrentPage(1);
+      
+      // 2. 해당 종목의 차트 및 볼륨 데이터를 백엔드에 요청하고 아코디언 오픈
+      fetchStockDetail(targetSymbol);
+
+      router.replace("/?tab=dashboard", { scroll: false });
+    }
+  }, [searchParams, router]);
+
+  // 필터링 및 페이징 로직
+  const filteredList = SP500_LIST.filter(item => 
+    item.symbol.includes(searchTerm.toUpperCase()) || 
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
+  const totalPages = Math.ceil(filteredList.length / ITEMS_PER_PAGE) || 1;
+  const currentList = filteredList.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE, 
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const formatNumber = (num) => num?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
   
@@ -178,7 +204,7 @@ export default function DashboardSection() {
         </div>
       </div>
 
-      {/* 하단 섹션: S&P 500 리스트 (기존 유지) */}
+      {/* 하단 섹션: S&P 500 리스트 */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
         
         <div className="p-6 border-b border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">

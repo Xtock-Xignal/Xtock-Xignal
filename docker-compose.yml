@@ -23,6 +23,9 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    environment:
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
     stdin_open: true
     tty: true
     depends_on:
