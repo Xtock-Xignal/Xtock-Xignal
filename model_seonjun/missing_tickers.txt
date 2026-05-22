@@ -1,4 +1,0 @@
-BF.B
-BRK.B
-PODD
-Q
