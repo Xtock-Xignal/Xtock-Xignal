@@ -39,6 +39,14 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [quizRewardCash, setQuizRewardCash] = useState(0);
+  const [attendanceRewardCash, setAttendanceRewardCash] = useState(0);
+  const [rewardHydrated, setRewardHydrated] = useState(false);
+  const totalRewardCash = quizRewardCash + attendanceRewardCash;
+
+  const handleQuizCorrect = () => {
+    setQuizRewardCash((prev) => prev + 50);
+  };
 
   useEffect(() => {
     setTodayDate(new Date().toLocaleDateString("ko-KR", {
@@ -48,6 +56,50 @@ export default function Home() {
       weekday: "long",
     }));
   }, []);
+
+  useEffect(() => {
+    if (!user?.username) {
+      setQuizRewardCash(0);
+      setAttendanceRewardCash(0);
+      setRewardHydrated(false);
+      return;
+    }
+
+    const quizRewardKey = `quiz_reward_total_${user.username}`;
+    const attendanceRewardKey = `attendance_reward_total_${user.username}`;
+    const storedQuizReward = Number(localStorage.getItem(quizRewardKey) ?? "0");
+    const storedAttendanceReward = Number(localStorage.getItem(attendanceRewardKey) ?? "0");
+    setQuizRewardCash(Number.isFinite(storedQuizReward) ? storedQuizReward : 0);
+    setAttendanceRewardCash(Number.isFinite(storedAttendanceReward) ? storedAttendanceReward : 0);
+    setRewardHydrated(true);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user?.username || !rewardHydrated) return;
+    const quizRewardKey = `quiz_reward_total_${user.username}`;
+    localStorage.setItem(quizRewardKey, String(quizRewardCash));
+  }, [user, quizRewardCash, rewardHydrated]);
+
+  useEffect(() => {
+    if (!user?.username || !rewardHydrated) return;
+    const attendanceRewardKey = `attendance_reward_total_${user.username}`;
+    localStorage.setItem(attendanceRewardKey, String(attendanceRewardCash));
+  }, [user, attendanceRewardCash, rewardHydrated]);
+
+  useEffect(() => {
+    if (!user?.username || !rewardHydrated) return;
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const attendanceDateKey = `attendance_last_date_${user.username}`;
+    const hasChecked = localStorage.getItem(attendanceDateKey) === todayKey;
+    if (hasChecked) {
+      alert("오늘은 이미 출석 보상이 지급되었습니다.");
+      return;
+    }
+
+    localStorage.setItem(attendanceDateKey, todayKey);
+    setAttendanceRewardCash((prev) => prev + 30);
+    alert("출석 체크 완료! 보상으로 $30가 지급되었습니다.");
+  }, [user, rewardHydrated]);
 
   // [추가] 로그인이 안 되어 있으면 로그인 페이지를 먼저 보여줌
   if (!user) {
@@ -210,9 +262,9 @@ export default function Home() {
               {activeMenu === "recent" && "관심 기업의 실시간 공식 트윗과 주가 흐름 모니터링"}
               {activeMenu === "historical" && "과거 주가에 영향을 미쳤던 결정적 트윗 학습"}
               {activeMenu === "learn" && "주식 기초, 기술적·기본적 분석, AI 기반 투자 학습"}
-              {activeMenu === "portfolio" && "나의 관심 종목 및 포트폴리오 관리"}
+              {activeMenu === "portfolio" && "시뮬레이션 보유 종목 및 거래 내역"}
               {activeMenu === "simulation" && "가상 현금으로 매수/매도 경험 시뮬레이션"}
-              {activeMenu === "settings" && "앱 설정 및 개인화"}
+              {activeMenu === "settings"}
             </p>
           </header>
 
@@ -221,10 +273,20 @@ export default function Home() {
             {activeMenu === "dashboard" && <DashboardSection />}
             {activeMenu === "recent" && <RecentStatusSection />}
             {activeMenu === "historical" && <HistoricalImpactSection />}
-            {activeMenu === "learn" && <LearningCenter />}
-            {activeMenu === "portfolio" && <PortfolioSection />}
-            {activeMenu === "simulation" && <StockSimulationSection />}
-            {activeMenu === "settings" && <SettingsSection />}
+            {activeMenu === "learn" && <LearningCenter onQuizCorrect={handleQuizCorrect} />}
+            {activeMenu === "portfolio" && (
+              <PortfolioSection user={user} isActive={activeMenu === "portfolio"} />
+            )}
+            {activeMenu === "simulation" && (
+              <StockSimulationSection rewardCash={totalRewardCash} user={user} />
+            )}
+            {activeMenu === "settings" && (
+              <SettingsSection
+                user={user}
+                onUserUpdate={(updated) => setUser(updated)}
+                onLogout={() => setUser(null)}
+              />
+            )}
           </div>
         </div>
       </main>

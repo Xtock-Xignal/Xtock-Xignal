@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../utils/api";
+import { useValuationPrices } from "../hooks/useValuationPrices";
+import { computeSimulationMetrics } from "../utils/simulationPortfolio";
 import {
   ComposedChart,
   Line,
@@ -14,6 +16,7 @@ import {
   ReferenceLine,
   useXAxisScale,
   useYAxisScale,
+  usePlotArea,
 } from "recharts";
 import { TrendingDown, TrendingUp } from "lucide-react";
 
@@ -104,6 +107,52 @@ function CandlestickMarks({ data }) {
   );
 }
 
+/** 차트 플롯 영역 클릭으로 거래일 선택 */
+function ChartDayClickBands({ data, selectedIndex, onSelectDay }) {
+  const plotArea = usePlotArea();
+  const xScale = useXAxisScale(0);
+  if (!plotArea || !xScale || !data?.length) return null;
+
+  const safeNumber = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const x0 = data.length >= 1 ? safeNumber(xScale(data[0].date)) : null;
+  const x1 = data.length >= 2 ? safeNumber(xScale(data[1].date)) : null;
+  const estW = x0 != null && x1 != null ? Math.abs(x1 - x0) : 14;
+  const colW = Math.max(5, estW);
+
+  return (
+    <g className="chart-day-click-bands">
+      {data.map((d, i) => {
+        const xL = xScale(d.date);
+        if (xL == null || Number.isNaN(Number(xL))) return null;
+        const cx = xL + estW / 2;
+        const isSelected = i === selectedIndex;
+        return (
+          <rect
+            key={String(d.date)}
+            x={cx - colW / 2}
+            y={0}
+            width={colW}
+            height={plotArea.height}
+            fill={isSelected ? "rgba(251, 191, 36, 0.12)" : "transparent"}
+            stroke={isSelected ? "#fbbf24" : "transparent"}
+            strokeWidth={isSelected ? 1 : 0}
+            strokeOpacity={0.35}
+            style={{ cursor: "pointer" }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectDay(i);
+            }}
+          />
+        );
+      })}
+    </g>
+  );
+}
+
 function ChartOhlcTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   const row = payload[0]?.payload;
@@ -126,7 +175,7 @@ function ChartOhlcTooltip({ active, payload, label }) {
 
 const INITIAL_CASH_DEFAULT = 5000; // 5000 달러(가상)
 
-export default function StockSimulationSection() {
+export default function StockSimulationSection({ rewardCash = 0, user = null }) {
   const quickTickers = useMemo(
     () => [
       { symbol: "TSLA", name: "Tesla" },
@@ -142,19 +191,122 @@ export default function StockSimulationSection() {
   const [initialCashInput, setInitialCashInput] = useState(
     String(INITIAL_CASH_DEFAULT)
   );
+  const baseInitialCash = Math.floor(Number(initialCashInput) || INITIAL_CASH_DEFAULT);
+  const effectiveInitialCash = baseInitialCash + Math.max(0, Number(rewardCash) || 0);
 
   const [cash, setCash] = useState(0);
   const [holdings, setHoldings] = useState({}); // { [symbol]: { shares, avgCost, realizedPnl } }
   const [trades, setTrades] = useState([]); // [{ id, type, symbol, date, price, shares, cashFlow, realizedPnl }]
+  const [simulationHydrated, setSimulationHydrated] = useState(false);
+  const [simulationLoading, setSimulationLoading] = useState(false);
 
   const [symbolInput, setSymbolInput] = useState("");
-  const [selectedSymbol, setSelectedSymbol] = useState("TSLA");
+  const [selectedSymbol, setSelectedSymbol] = useState("-");
   const [loadingSymbol, setLoadingSymbol] = useState(false);
 
   const [priceSeriesBySymbol, setPriceSeriesBySymbol] = useState({}); // { [symbol]: [{date, open, high, low, close, volume}] }
   const [selectedDayBySymbol, setSelectedDayBySymbol] = useState({}); // { [symbol]: index }
 
   const [sharesInput, setSharesInput] = useState("1");
+
+  const [pinIsSet, setPinIsSet] = useState(false);
+  const [pinStatusLoaded, setPinStatusLoaded] = useState(false);
+  const [setupPin, setSetupPin] = useState("");
+  const [setupPinConfirm, setSetupPinConfirm] = useState("");
+  const [setupPinBusy, setSetupPinBusy] = useState(false);
+  const [pinGate, setPinGate] = useState({ open: false, action: null });
+  const [tradePinInput, setTradePinInput] = useState("");
+  const [pinGateBusy, setPinGateBusy] = useState(false);
+  const [showPinChangeForm, setShowPinChangeForm] = useState(false);
+  const [oldPinForChange, setOldPinForChange] = useState("");
+
+  useEffect(() => {
+    const email = user?.email?.trim();
+    if (!email) {
+      setPinStatusLoaded(false);
+      setPinIsSet(false);
+      return;
+    }
+    setPinStatusLoaded(false);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.post("/api/simulation/pin/status", { email });
+        if (!cancelled && res?.data?.success) {
+          setPinIsSet(Boolean(res.data.pin_set));
+        } else if (!cancelled) {
+          setPinIsSet(false);
+        }
+      } catch (e) {
+        console.error("Failed to load PIN status", e);
+        if (!cancelled) setPinIsSet(false);
+      } finally {
+        if (!cancelled) setPinStatusLoaded(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.email]);
+
+  useEffect(() => {
+    const email = user?.email?.trim();
+    if (!email) {
+      setSimulationHydrated(false);
+      return;
+    }
+
+    let cancelled = false;
+    const loadSimulationState = async () => {
+      setSimulationLoading(true);
+      try {
+        const res = await api.post("/api/simulation/state/get", { email });
+        const state = res?.data?.state;
+
+        if (!cancelled && res?.data?.success && res?.data?.exists && state) {
+          setCash(Number(state.cash) || 0);
+          setHoldings(state.holdings || {});
+          setTrades(Array.isArray(state.trades) ? state.trades : []);
+          setSimulationStarted(Boolean(state.simulation_started));
+        }
+      } catch (e) {
+        console.error("Failed to load simulation state", e);
+      } finally {
+        if (!cancelled) {
+          setSimulationHydrated(true);
+          setSimulationLoading(false);
+        }
+      }
+    };
+
+    setSimulationHydrated(false);
+    loadSimulationState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.email]);
+
+  useEffect(() => {
+    const email = user?.email?.trim();
+    if (!email || !simulationHydrated) return;
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        await api.post("/api/simulation/state/save", {
+          email,
+          cash,
+          holdings,
+          trades,
+          simulation_started: simulationStarted,
+        });
+      } catch (e) {
+        console.error("Failed to save simulation state", e);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [user?.email, cash, holdings, trades, simulationStarted, simulationHydrated]);
 
   const toISODateInput = (d) => {
     const x = new Date(d);
@@ -172,6 +324,11 @@ export default function StockSimulationSection() {
 
   // 성능/차트 렌더링을 위해 달력 기준 최대 범위를 제한합니다.
   const MAX_CALENDAR_DAYS = 800;
+  const REALTIME_HISTORY_DAYS = 100;
+
+  /** realtime: 최근 N거래일 | historical: 시작~종료일 기간 */
+  const [chartSource, setChartSource] = useState("realtime");
+  const [chartSourceBySymbol, setChartSourceBySymbol] = useState({});
 
   const [stockStartDateInput, setStockStartDateInput] = useState(() => {
     const end = new Date();
@@ -214,43 +371,34 @@ export default function StockSimulationSection() {
   const currentPrice = Number(currentRow?.close || 0);
   const currentDate = currentRow?.date || "";
 
-  const getCurrentPriceForSymbol = useCallback(
-    (symbol) => {
-      const s = priceSeriesBySymbol[symbol] || [];
-      if (!s.length) return 0;
-      const idx = selectedDayBySymbol[symbol] ?? s.length - 1;
-      return Number(s[idx]?.close || 0);
+  const handleSelectChartDay = useCallback(
+    (index) => {
+      if (!series.length) return;
+      const next = clamp(index, 0, series.length - 1);
+      setSelectedDayBySymbol((prev) => ({
+        ...prev,
+        [selectedSymbol]: next,
+      }));
     },
-    [priceSeriesBySymbol, selectedDayBySymbol]
+    [selectedSymbol, series.length]
   );
 
-  const portfolioMarketValue = useMemo(() => {
-    return Object.entries(holdings).reduce((sum, [sym, h]) => {
-      const px = getCurrentPriceForSymbol(sym);
-      return sum + px * (Number(h.shares) || 0);
-    }, 0);
-  }, [holdings, getCurrentPriceForSymbol]);
+  const { holdingList, getValuationPrice } = useValuationPrices(
+    holdings,
+    simulationStarted
+  );
 
-  const realizedPnl = useMemo(() => {
-    return Object.values(holdings).reduce(
-      (sum, h) => sum + (Number(h.realizedPnl) || 0),
-      0
-    );
-  }, [holdings]);
+  const {
+    totalValue,
+    totalPnl,
+    realizedPnl,
+    unrealizedPnl,
+  } = useMemo(
+    () => computeSimulationMetrics(cash, holdings, getValuationPrice),
+    [cash, holdings, getValuationPrice]
+  );
 
-  const unrealizedPnl = useMemo(() => {
-    return Object.entries(holdings).reduce((sum, [sym, h]) => {
-      const px = getCurrentPriceForSymbol(sym);
-      const shares = Number(h.shares) || 0;
-      const avg = Number(h.avgCost) || 0;
-      return sum + (px - avg) * shares;
-    }, 0);
-  }, [holdings, getCurrentPriceForSymbol]);
-
-  const totalPnl = realizedPnl + unrealizedPnl;
-  const totalValue = cash + portfolioMarketValue;
-
-  const canTrade = simulationStarted && currentPrice > 0;
+  const canTrade = simulationStarted && currentPrice > 0 && pinIsSet && pinStatusLoaded;
   const holdingForSelected = holdings[selectedSymbol] || {
     shares: 0,
     avgCost: 0,
@@ -262,30 +410,71 @@ export default function StockSimulationSection() {
   const buyCost = desiredShares * currentPrice;
   const sellProceeds = desiredShares * currentPrice;
 
-  const resetAccount = () => {
-    const parsed = Math.floor(Number(initialCashInput) || INITIAL_CASH_DEFAULT);
-    setCash(parsed);
+  const resetAccount = async () => {
+    const email = user?.email?.trim();
+    const isAccountReset = simulationStarted;
+
+    if (isAccountReset && email) {
+      try {
+        await api.post("/api/simulation/state/delete", { email });
+      } catch (e) {
+        console.error("Failed to delete simulation state", e);
+      }
+    }
+
+    const nextCash = effectiveInitialCash;
+    setCash(nextCash);
     setHoldings({});
     setTrades([]);
     setSimulationStarted(true);
+    setSimulationHydrated(true);
+
+    if (email) {
+      try {
+        await api.post("/api/simulation/state/save", {
+          email,
+          cash: nextCash,
+          holdings: {},
+          trades: [],
+          simulation_started: true,
+        });
+      } catch (e) {
+        console.error("Failed to save simulation state after reset", e);
+      }
+    }
   };
 
-  const fetchSymbolSeries = async (symbol) => {
+  const activeChartSource =
+    selectedSymbol && selectedSymbol !== "-"
+      ? chartSourceBySymbol[selectedSymbol] ?? chartSource
+      : chartSource;
+
+  const fetchSymbolSeries = async (symbol, sourceOverride) => {
     const normalized = (symbol || "").trim().toUpperCase();
     if (!normalized) return;
 
-    if (dateRangeError) {
+    const source = sourceOverride ?? chartSource;
+
+    if (source === "historical" && dateRangeError) {
       alert(dateRangeError);
       return;
     }
 
     setLoadingSymbol(true);
     try {
-      const res = await api.post("/api/recent-status", {
-        text: normalized,
-        start_date: stockStartDateInput,
-        end_date: stockEndDateInput,
-      });
+      const payload =
+        source === "historical"
+          ? {
+              text: normalized,
+              start_date: stockStartDateInput,
+              end_date: stockEndDateInput,
+            }
+          : {
+              text: normalized,
+              stock_history_days: REALTIME_HISTORY_DAYS,
+            };
+
+      const res = await api.post("/api/recent-status", payload);
       const nextSeries = res?.data?.stock_data || [];
 
       if (!Array.isArray(nextSeries) || nextSeries.length === 0) {
@@ -293,22 +482,27 @@ export default function StockSimulationSection() {
         return;
       }
 
-      // 방어적으로 start_date/end_date 범위에 해당하는 거래일만 필터링합니다.
-      // (yfinance/백엔드 처리 이슈가 있어도 UI가 사용자가 지정한 범위로 보이도록)
-      const filteredSeries = nextSeries.filter((r) => {
-        const d = r?.date;
-        if (!d) return false;
-        return d >= stockStartDateInput && d <= stockEndDateInput;
-      });
-
-      if (filteredSeries.length === 0) {
-        alert("해당 기간(start~end)의 주가 데이터를 불러올 수 없습니다.");
-        return;
+      let filteredSeries = nextSeries;
+      if (source === "historical") {
+        filteredSeries = nextSeries.filter((r) => {
+          const d = r?.date;
+          if (!d) return false;
+          return d >= stockStartDateInput && d <= stockEndDateInput;
+        });
+        if (filteredSeries.length === 0) {
+          alert("해당 기간(start~end)의 주가 데이터를 불러올 수 없습니다.");
+          return;
+        }
       }
 
       setPriceSeriesBySymbol((prev) => ({
         ...prev,
         [normalized]: filteredSeries,
+      }));
+
+      setChartSourceBySymbol((prev) => ({
+        ...prev,
+        [normalized]: source,
       }));
 
       setSelectedDayBySymbol((prev) => ({
@@ -317,6 +511,7 @@ export default function StockSimulationSection() {
       }));
 
       setSelectedSymbol(normalized);
+      if (sourceOverride) setChartSource(source);
     } catch (e) {
       console.error(e);
       alert("서버 통신 오류가 발생했습니다.");
@@ -325,7 +520,122 @@ export default function StockSimulationSection() {
     }
   };
 
+  const handleChartSourceChange = (mode) => {
+    setChartSource(mode);
+    const sym = (symbolInput || selectedSymbol || "").trim().toUpperCase();
+    if (sym && sym !== "-") {
+      void fetchSymbolSeries(sym, mode);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedSymbol || selectedSymbol === "-") return;
+    const saved = chartSourceBySymbol[selectedSymbol];
+    if (saved) setChartSource(saved);
+  }, [selectedSymbol, chartSourceBySymbol]);
+
   // NOTE: 이 컴포넌트는 사용자가 종목을 조회했을 때만 API를 호출합니다.
+
+  const submitSetupPin = async () => {
+    const email = user?.email?.trim();
+    if (!email) return;
+    if (setupPin.length !== 4 || setupPinConfirm.length !== 4 || !/^\d{4}$/.test(setupPin)) {
+      alert("PIN은 4자리 숫자만 입력해주세요.");
+      return;
+    }
+    if (setupPin !== setupPinConfirm) {
+      alert("PIN과 확인 입력이 일치하지 않습니다.");
+      return;
+    }
+    if (pinIsSet) {
+      if (!showPinChangeForm) {
+        alert("「PIN 변경」을 눌러 변경 폼을 연 뒤 입력해주세요.");
+        return;
+      }
+      if (oldPinForChange.length !== 4 || !/^\d{4}$/.test(oldPinForChange)) {
+        alert("기존 PIN 4자리를 입력해주세요.");
+        return;
+      }
+    }
+    setSetupPinBusy(true);
+    try {
+      const body = pinIsSet
+        ? { email, pin: setupPin, old_pin: oldPinForChange }
+        : { email, pin: setupPin };
+      const res = await api.post("/api/simulation/pin/set", body);
+      if (res?.data?.success) {
+        setPinIsSet(true);
+        setSetupPin("");
+        setSetupPinConfirm("");
+        setOldPinForChange("");
+        setShowPinChangeForm(false);
+        alert(res.data.msg || "저장되었습니다.");
+      } else {
+        alert(res?.data?.msg || "PIN 저장에 실패했습니다.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("서버 오류로 PIN을 저장하지 못했습니다.");
+    } finally {
+      setSetupPinBusy(false);
+    }
+  };
+
+  const requestBuy = () => {
+    if (!simulationStarted || !currentPrice || !pinIsSet || !pinStatusLoaded) return;
+    if (desiredShares <= 0) {
+      alert("매수할 수량을 입력해주세요.");
+      return;
+    }
+    if (buyCost > cash) {
+      alert(`가상 현금이 부족합니다. 필요: ${formatMoney(buyCost)}, 보유: ${formatMoney(cash)}`);
+      return;
+    }
+    setTradePinInput("");
+    setPinGate({ open: true, action: "buy" });
+  };
+
+  const requestSell = () => {
+    if (!simulationStarted || !currentPrice || !pinIsSet || !pinStatusLoaded) return;
+    if (desiredShares <= 0) {
+      alert("매도할 수량을 입력해주세요.");
+      return;
+    }
+    if (desiredShares > selectedShares) {
+      alert("보유 수량을 초과해서 매도할 수 없습니다.");
+      return;
+    }
+    setTradePinInput("");
+    setPinGate({ open: true, action: "sell" });
+  };
+
+  const confirmTradePin = async () => {
+    const action = pinGate.action;
+    const email = user?.email?.trim();
+    if (!email || !action) return;
+    const pin = tradePinInput.trim();
+    if (!/^\d{4}$/.test(pin)) {
+      alert("PIN 4자리 숫자를 입력해주세요.");
+      return;
+    }
+    setPinGateBusy(true);
+    try {
+      const res = await api.post("/api/simulation/pin/verify", { email, pin });
+      if (!res?.data?.success) {
+        alert(res?.data?.msg || "PIN이 일치하지 않습니다.");
+        return;
+      }
+      setPinGate({ open: false, action: null });
+      setTradePinInput("");
+      if (action === "buy") buy();
+      else if (action === "sell") sell();
+    } catch (e) {
+      console.error(e);
+      alert("PIN 확인 중 오류가 발생했습니다.");
+    } finally {
+      setPinGateBusy(false);
+    }
+  };
 
   const buy = () => {
     if (!canTrade) return;
@@ -423,8 +733,6 @@ export default function StockSimulationSection() {
     ]);
   };
 
-  const holdingList = Object.entries(holdings);
-
   return (
     <div className="space-y-6 bg-slate-900 border border-slate-800 rounded-2xl p-8 pb-24 animate-fade-in overflow-visible">
       <div className="flex flex-col lg:flex-row lg:items-start gap-4 justify-between">
@@ -442,14 +750,23 @@ export default function StockSimulationSection() {
                 inputMode="numeric"
                 className="w-40 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <div className="text-xs text-emerald-300 whitespace-nowrap">
+                보너스 +{formatMoney(rewardCash)}
+              </div>
             </div>
           ) : null}
 
           <button
-            onClick={resetAccount}
+            type="button"
+            onClick={() => void resetAccount()}
+            disabled={simulationLoading}
             className="px-5 py-2 rounded-lg font-semibold transition-colors bg-blue-600 hover:bg-blue-500 text-white"
           >
-            {simulationStarted ? "계좌 초기화" : "시뮬레이션 시작"}
+            {simulationLoading
+              ? "불러오는 중"
+              : simulationStarted
+              ? "계좌 초기화"
+              : "시뮬레이션 시작"}
           </button>
         </div>
       </div>
@@ -462,6 +779,12 @@ export default function StockSimulationSection() {
             <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-4">
               <div className="text-slate-400 text-xs mb-1">가상 현금</div>
               <div className="text-white text-xl font-bold">{formatMoney(cash)}</div>
+              {/* {!simulationStarted ? (
+                <div className="mt-1 text-[11px] text-slate-500">
+                  시작 시 {formatMoney(baseInitialCash)} + 보너스 {formatMoney(rewardCash)} ={" "}
+                  {formatMoney(effectiveInitialCash)}
+                </div>
+              ) : null} */}
             </div>
             <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-4">
               <div className="text-slate-400 text-xs mb-1">계좌 총액</div>
@@ -497,6 +820,25 @@ export default function StockSimulationSection() {
           </div>
 
           <div className="bg-slate-800/30 border border-slate-700 rounded-2xl p-4">
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {[
+                { id: "realtime", label: "실시간 차트" },
+                { id: "historical", label: "과거 차트" },
+              ].map(({ id, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => handleChartSourceChange(id)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${
+                    chartSource === id
+                      ? "bg-blue-600 border-blue-500 text-white"
+                      : "bg-slate-900/80 border-slate-600 text-slate-300 hover:border-slate-500"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <div className="text-white font-semibold whitespace-nowrap">종목</div>
               <input
@@ -506,33 +848,36 @@ export default function StockSimulationSection() {
                 placeholder="예: TSLA, AAPL"
                 onKeyDown={(e) => e.key === "Enter" && fetchSymbolSeries(symbolInput)}
               />
-              <div className="flex items-center gap-2">
-                <span className="text-slate-300 text-xs whitespace-nowrap">기간</span>
-                <input
-                  type="date"
-                  value={stockStartDateInput}
-                  onChange={(e) => setStockStartDateInput(e.target.value)}
-                  className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <span className="text-slate-500 text-xs">~</span>
-                <input
-                  type="date"
-                  value={stockEndDateInput}
-                  onChange={(e) => setStockEndDateInput(e.target.value)}
-                  className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              {dateRangeError ? (
-                <div className="text-red-400 text-[11px] leading-tight">
+              {chartSource === "historical" ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-300 text-xs whitespace-nowrap">기간</span>
+                  <input
+                    type="date"
+                    value={stockStartDateInput}
+                    onChange={(e) => setStockStartDateInput(e.target.value)}
+                    className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="text-slate-500 text-xs">~</span>
+                  <input
+                    type="date"
+                    value={stockEndDateInput}
+                    onChange={(e) => setStockEndDateInput(e.target.value)}
+                    className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              ) : null}
+              {chartSource === "historical" && dateRangeError ? (
+                <div className="text-red-400 text-[11px] leading-tight w-full sm:w-auto">
                   {dateRangeError}
                 </div>
               ) : null}
               <button
+                type="button"
                 onClick={() => fetchSymbolSeries(symbolInput)}
-                disabled={loadingSymbol}
+                disabled={loadingSymbol || (chartSource === "historical" && Boolean(dateRangeError))}
                 className="px-4 py-2 rounded-lg font-semibold bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 shrink-0"
               >
-                {loadingSymbol ? "조회 중..." : "조회"}
+                {loadingSymbol ? "조회 중" : "조회"}
               </button>
             </div>
 
@@ -565,7 +910,7 @@ export default function StockSimulationSection() {
             ) : (
               <div className="space-y-3 overflow-y-auto custom-scrollbar pr-1" style={{ maxHeight: 200 }}>
                 {holdingList.map(([sym, h]) => {
-                  const px = getCurrentPriceForSymbol(sym);
+                  const px = getValuationPrice(sym);
                   const shares = Number(h.shares) || 0;
                   const avg = Number(h.avgCost) || 0;
                   const pnl = (px - avg) * shares;
@@ -661,14 +1006,6 @@ export default function StockSimulationSection() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <div className="text-white font-semibold">매수 / 매도</div>
-                  <div className="text-slate-400 text-xs mt-0.5">
-                    현재가(선택일):{" "}
-                    <span className="text-white font-bold">
-                      {currentPrice ? formatMoney(currentPrice) : "-"}
-                    </span>
-                    <span className="text-slate-600"> · </span>
-                    <span className="text-slate-400">보유 {Number(holdingForSelected.shares) || 0}주</span>
-                  </div>
                 </div>
                 {!simulationStarted ? (
                   <div className="text-amber-400 text-xs font-semibold sm:text-right">
@@ -676,8 +1013,142 @@ export default function StockSimulationSection() {
                   </div>
                 ) : !series.length ? (
                   <div className="text-slate-500 text-xs sm:text-right">종목을 조회한 뒤 거래할 수 있어요.</div>
+                ) : !pinStatusLoaded ? (
+                  <div className="text-slate-500 text-xs sm:text-right">거래 PIN 확인 중</div>
+                ) : !pinIsSet ? (
+                  <div className="text-amber-400 text-xs font-semibold sm:text-right">
+                    아래에서 거래 PIN(4자리)을 먼저 설정해주세요.
+                  </div>
                 ) : null}
               </div>
+
+              {simulationStarted && pinStatusLoaded && !pinIsSet ? (
+                <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 space-y-3">
+                  <div className="text-amber-200 text-sm font-semibold">거래 PIN 설정 (4자리 숫자)</div>
+                  <p className="text-amber-100/80 text-xs">
+                    매수·매도 시마다 입력합니다. 서버에는 암호화 해시만 저장됩니다.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+                    <div className="flex-1 min-w-0">
+                      <label className="block text-amber-100/90 text-xs mb-1">PIN</label>
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={4}
+                        value={setupPin}
+                        onChange={(e) => setSetupPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                        className="w-full max-w-[11rem] bg-slate-900 border border-amber-500/30 rounded-lg px-3 py-2 text-white tracking-widest outline-none focus:ring-2 focus:ring-amber-500"
+                        placeholder="••••"
+                        autoComplete="new-password"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <label className="block text-amber-100/90 text-xs mb-1">PIN 확인</label>
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={4}
+                        value={setupPinConfirm}
+                        onChange={(e) => setSetupPinConfirm(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                        className="w-full max-w-[11rem] bg-slate-900 border border-amber-500/30 rounded-lg px-3 py-2 text-white tracking-widest outline-none focus:ring-2 focus:ring-amber-500"
+                        placeholder="••••"
+                        autoComplete="new-password"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void submitSetupPin()}
+                      disabled={setupPinBusy || setupPin.length !== 4 || setupPinConfirm.length !== 4}
+                      className="px-4 py-2 rounded-lg font-semibold bg-amber-600 hover:bg-amber-500 text-white text-sm disabled:opacity-50 shrink-0"
+                    >
+                      {setupPinBusy ? "저장 중" : "PIN 저장"}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {pinIsSet ? (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    <span>거래 PIN이 설정되어 있습니다.</span>
+                    <button
+                      type="button"
+                      className="text-blue-400 hover:underline"
+                      onClick={() => {
+                        setShowPinChangeForm((v) => !v);
+                        setOldPinForChange("");
+                        setSetupPin("");
+                        setSetupPinConfirm("");
+                      }}
+                    >
+                      {showPinChangeForm ? "PIN 변경 취소" : "PIN 변경"}
+                    </button>
+                  </div>
+                  {showPinChangeForm ? (
+                    <div className="rounded-xl border border-slate-600 bg-slate-900/50 p-4 space-y-3">
+                      <div className="text-slate-300 text-xs font-semibold">새 PIN으로 변경</div>
+                      <div className="flex flex-col sm:flex-row gap-3 sm:items-end flex-wrap">
+                        <div>
+                          <label className="block text-slate-400 text-xs mb-1">기존 PIN</label>
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={4}
+                            value={oldPinForChange}
+                            onChange={(e) =>
+                              setOldPinForChange(e.target.value.replace(/\D/g, "").slice(0, 4))
+                            }
+                            className="w-full max-w-[11rem] bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white tracking-widest outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="••••"
+                            autoComplete="off"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-400 text-xs mb-1">새 PIN</label>
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={4}
+                            value={setupPin}
+                            onChange={(e) => setSetupPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                            className="w-full max-w-[11rem] bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white tracking-widest outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="••••"
+                            autoComplete="new-password"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-400 text-xs mb-1">새 PIN 확인</label>
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={4}
+                            value={setupPinConfirm}
+                            onChange={(e) =>
+                              setSetupPinConfirm(e.target.value.replace(/\D/g, "").slice(0, 4))
+                            }
+                            className="w-full max-w-[11rem] bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white tracking-widest outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="••••"
+                            autoComplete="new-password"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void submitSetupPin()}
+                          disabled={
+                            setupPinBusy ||
+                            oldPinForChange.length !== 4 ||
+                            setupPin.length !== 4 ||
+                            setupPinConfirm.length !== 4
+                          }
+                          className="px-4 py-2 rounded-lg font-semibold bg-blue-600 hover:bg-blue-500 text-white text-sm disabled:opacity-50 shrink-0"
+                        >
+                          {setupPinBusy ? "저장 중" : "새 PIN 저장"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
 
               <div className="flex flex-col sm:flex-row sm:items-end gap-4">
                 <div className="flex-1 min-w-0">
@@ -690,31 +1161,22 @@ export default function StockSimulationSection() {
                     min={0}
                     step={1}
                   />
-                  <div className="text-slate-500 text-xs mt-2">
-                    매수 총액:{" "}
-                    <span className="text-white font-semibold">
-                      {desiredShares > 0 ? formatMoney(buyCost) : "-"}
-                    </span>
-                    <span className="text-slate-600"> · </span>
-                    매도 예상:{" "}
-                    <span className="text-white font-semibold">
-                      {desiredShares > 0 ? formatMoney(sellProceeds) : "-"}
-                    </span>
-                  </div>
                 </div>
                 <div className="flex gap-2 shrink-0 w-full sm:w-auto">
                   <button
                     type="button"
-                    onClick={buy}
-                    disabled={!canTrade || desiredShares <= 0}
+                    onClick={requestBuy}
+                    disabled={!canTrade || desiredShares <= 0 || pinGateBusy}
                     className="flex-1 sm:flex-initial sm:min-w-[7rem] px-4 py-2.5 rounded-xl font-bold bg-blue-600 hover:bg-blue-500 text-white text-sm disabled:opacity-50"
                   >
                     매수
                   </button>
                   <button
                     type="button"
-                    onClick={sell}
-                    disabled={!canTrade || desiredShares <= 0 || desiredShares > selectedShares}
+                    onClick={requestSell}
+                    disabled={
+                      !canTrade || desiredShares <= 0 || desiredShares > selectedShares || pinGateBusy
+                    }
                     className="flex-1 sm:flex-initial sm:min-w-[7rem] px-4 py-2.5 rounded-xl font-bold bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white text-sm disabled:opacity-50"
                   >
                     매도
@@ -723,47 +1185,6 @@ export default function StockSimulationSection() {
               </div>
             </div>
 
-            {series.length ? (
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSelectedDayBySymbol((prev) => ({
-                      ...prev,
-                      [selectedSymbol]: clamp(selectedDayIndex - 1, 0, series.length - 1),
-                    }))
-                  }
-                  className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 hover:border-blue-500 hover:text-blue-300 text-xs shrink-0"
-                >
-                  이전
-                </button>
-                <input
-                  type="range"
-                  min={0}
-                  max={series.length - 1}
-                  value={selectedDayIndex}
-                  onChange={(e) =>
-                    setSelectedDayBySymbol((prev) => ({
-                      ...prev,
-                      [selectedSymbol]: Number(e.target.value),
-                    }))
-                  }
-                  className="flex-1 min-w-0 accent-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSelectedDayBySymbol((prev) => ({
-                      ...prev,
-                      [selectedSymbol]: clamp(selectedDayIndex + 1, 0, series.length - 1),
-                    }))
-                  }
-                  className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 hover:border-blue-500 hover:text-blue-300 text-xs shrink-0"
-                >
-                  다음
-                </button>
-              </div>
-            ) : null}
           </div>
 
           <div className="relative z-0 bg-slate-800/30 border border-slate-700 rounded-2xl p-4 min-h-0 isolate">
@@ -771,7 +1192,18 @@ export default function StockSimulationSection() {
               <div className="min-w-0">
                 <div className="text-white font-semibold text-lg">거래 차트</div>
                 <div className="text-slate-400 text-xs mt-1">
-                  {selectedSymbol} · 선택 날짜:{" "}
+                  {selectedSymbol} ·{" "}
+                  <span
+                    className={
+                      activeChartSource === "realtime" ? "text-emerald-400" : "text-amber-400"
+                    }
+                  >
+                    {activeChartSource === "realtime"
+                      ? `실시간`
+                      : `과거`}
+                  </span>
+                  <span className="text-slate-600"> · </span>
+                  선택 날짜:{" "}
                   <span className="text-white font-semibold">{currentDate || "—"}</span>
                   <span className="text-slate-600"> · </span>
                   <span className="text-slate-500">막대: 거래량</span>
@@ -786,6 +1218,26 @@ export default function StockSimulationSection() {
                 </div>
               </div>
               <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
+                <div className="flex flex-wrap gap-1.5 justify-end">
+                  {[
+                    { id: "realtime", label: "실시간" },
+                    { id: "historical", label: "과거" },
+                  ].map(({ id, label }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => handleChartSourceChange(id)}
+                      disabled={loadingSymbol}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-50 ${
+                        chartSource === id
+                          ? "bg-emerald-600 border-emerald-500 text-white"
+                          : "bg-slate-900/80 border-slate-600 text-slate-300 hover:border-slate-500"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 <div className="flex flex-wrap gap-1.5 justify-end">
                   {[
                     { id: "ma", label: "이평선" },
@@ -932,6 +1384,11 @@ export default function StockSimulationSection() {
                         activeDot={{ r: 6, strokeWidth: 0, fill: "#fff" }}
                       />
                     ) : null}
+                    <ChartDayClickBands
+                      data={chartData}
+                      selectedIndex={selectedDayIndex}
+                      onSelectDay={handleSelectChartDay}
+                    />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -941,17 +1398,58 @@ export default function StockSimulationSection() {
               </div>
             )}
           </div>
+        </div>
+      </div>
 
-          <div className="bg-slate-800/30 border border-slate-700 rounded-2xl p-4">
-            <div className="text-white font-semibold mb-2">시뮬레이션 방법</div>
-            <div className="text-slate-400 text-sm space-y-2">
-              <div>1) 시뮬레이션 시작 후 종목을 조회합니다.</div>
-              <div>2) 날짜를 지정해 매수·매도합니다. (거래량: 차트 막대 참고)</div>
-              <div>3) 계좌 총액과 손익이 실시간으로 갱신됩니다.</div>
+      {pinGate.open ? (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="trade-pin-title"
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-slate-600 bg-slate-900 p-6 shadow-xl space-y-4">
+            <div id="trade-pin-title" className="text-lg font-bold text-white">
+              {pinGate.action === "buy" ? "매수" : "매도"}
+            </div>
+            <p className="text-slate-400 text-sm">4자리 PIN을 입력하세요.</p>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={tradePinInput}
+              onChange={(e) => setTradePinInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-3 text-white text-center text-xl tracking-[0.4em] outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="••••"
+              autoComplete="one-time-code"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void confirmTradePin();
+              }}
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setPinGate({ open: false, action: null });
+                  setTradePinInput("");
+                }}
+                disabled={pinGateBusy}
+                className="px-4 py-2 rounded-lg text-slate-300 hover:bg-slate-800 text-sm disabled:opacity-50"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmTradePin()}
+                disabled={pinGateBusy || tradePinInput.length !== 4}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold disabled:opacity-50"
+              >
+                {pinGateBusy ? "확인 중" : "확인"}
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

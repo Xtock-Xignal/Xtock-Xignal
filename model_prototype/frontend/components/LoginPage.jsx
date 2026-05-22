@@ -158,7 +158,6 @@ export default function LoginPage({ onLogin }) {
                 <p className="text-slate-500 text-sm">
                   계정이 없으신가요? <button onClick={() => setView('signup')} className="text-blue-400 hover:underline">회원가입</button>
                 </p>
-                <button onClick={() => setView('forgot')} className="text-slate-600 text-xs hover:text-white">비밀번호 찾기</button>
               </>
             )}
             {view === 'signup' && (

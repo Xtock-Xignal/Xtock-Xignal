@@ -1,4 +1,5 @@
 import os
+import re
 import datetime as dt
 from typing import Optional, List
 from contextlib import asynccontextmanager
@@ -319,6 +320,24 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def get_user_collection():
     return mongo_client["xtock_db"]["users"]
 
+def find_user_doc_by_email(users_col, raw_email: str):
+    """회원가입 시 이메일 대소문자가 섞여 저장될 수 있어 대소문자 무시로 조회합니다."""
+    raw = (raw_email or "").strip()
+    if not raw:
+        return None
+    u = users_col.find_one({"email": raw})
+    if u:
+        return u
+    try:
+        return users_col.find_one(
+            {"email": {"$regex": f"^{re.escape(raw)}$", "$options": "i"}}
+        )
+    except re.error:
+        return None
+
+def get_simulation_collection():
+    return mongo_client["xtock_db"]["simulation_states"]
+
 # 데이터 검증용 Pydantic 모델
 class UserSignup(BaseModel):
     username: str
@@ -328,6 +347,36 @@ class UserSignup(BaseModel):
 class UserLogin(BaseModel):
     email: str
     password: str
+
+class SimulationStatePayload(BaseModel):
+    email: str
+    cash: float = 0
+    holdings: dict = Field(default_factory=dict)
+    trades: list = Field(default_factory=list)
+    simulation_started: bool = False
+
+class SimulationStateGetPayload(BaseModel):
+    email: str
+
+class SimulationPinSetPayload(BaseModel):
+    email: str
+    pin: str = Field(..., min_length=4, max_length=4)
+    old_pin: Optional[str] = None
+
+class SimulationPinVerifyPayload(BaseModel):
+    email: str
+    pin: str = Field(..., min_length=4, max_length=4)
+
+class UserProfileUpdatePayload(BaseModel):
+    email: str
+    current_password: str
+    username: Optional[str] = None
+    new_email: Optional[str] = None
+    new_password: Optional[str] = None
+
+class UserDeletePayload(BaseModel):
+    email: str
+    current_password: str
 
 # 비밀번호 관련 함수
 def verify_password(plain_password, hashed_password):
@@ -730,6 +779,216 @@ def login_user(user: UserLogin):
             "email": db_user["email"]
         }
     }
+
+@app.post("/api/simulation/state/get")
+def get_simulation_state(payload: SimulationStateGetPayload):
+    sim_col = get_simulation_collection()
+    email = payload.email.strip().lower()
+    if not email:
+        return {"success": False, "msg": "이메일이 필요합니다."}
+
+    doc = sim_col.find_one({"email": email}, {"_id": 0})
+    if not doc:
+        return {"success": True, "exists": False}
+
+    return {
+        "success": True,
+        "exists": True,
+        "state": {
+            "cash": float(doc.get("cash", 0)),
+            "holdings": doc.get("holdings", {}),
+            "trades": doc.get("trades", []),
+            "simulation_started": bool(doc.get("simulation_started", False)),
+            "updated_at": doc.get("updated_at"),
+        }
+    }
+
+@app.post("/api/simulation/state/save")
+def save_simulation_state(payload: SimulationStatePayload):
+    sim_col = get_simulation_collection()
+    email = payload.email.strip().lower()
+    if not email:
+        return {"success": False, "msg": "이메일이 필요합니다."}
+
+    now = dt.datetime.now().isoformat()
+    state_doc = {
+        "email": email,
+        "cash": float(payload.cash),
+        "holdings": payload.holdings,
+        "trades": payload.trades,
+        "simulation_started": bool(payload.simulation_started),
+        "updated_at": now,
+    }
+
+    sim_col.update_one({"email": email}, {"$set": state_doc}, upsert=True)
+    return {"success": True, "updated_at": now}
+
+@app.post("/api/simulation/state/delete")
+def delete_simulation_state(payload: SimulationStateGetPayload):
+    sim_col = get_simulation_collection()
+    email = payload.email.strip().lower()
+    if not email:
+        return {"success": False, "msg": "이메일이 필요합니다."}
+
+    result = sim_col.delete_one({"email": email})
+    return {"success": True, "deleted": result.deleted_count > 0}
+
+@app.post("/api/simulation/pin/status")
+def simulation_pin_status(payload: SimulationStateGetPayload):
+    users_col = get_user_collection()
+    user_doc = find_user_doc_by_email(users_col, payload.email)
+    if not user_doc:
+        return {"success": False, "msg": "사용자를 찾을 수 없습니다.", "pin_set": False}
+    pin_set = bool(user_doc.get("simulation_pin_hash"))
+    return {"success": True, "pin_set": pin_set}
+
+@app.post("/api/simulation/pin/set")
+def simulation_pin_set(payload: SimulationPinSetPayload):
+    pin = (payload.pin or "").strip()
+    if len(pin) != 4 or not pin.isdigit():
+        return {"success": False, "msg": "PIN은 4자리 숫자여야 합니다."}
+
+    users_col = get_user_collection()
+    user_doc = find_user_doc_by_email(users_col, payload.email)
+    if not user_doc:
+        return {"success": False, "msg": "사용자를 찾을 수 없습니다."}
+
+    canon_email = user_doc["email"]
+    existing_hash = user_doc.get("simulation_pin_hash")
+
+    if existing_hash:
+        old = (payload.old_pin or "").strip()
+        if len(old) != 4 or not old.isdigit():
+            return {"success": False, "msg": "기존 PIN 4자리를 입력해주세요."}
+        if not verify_password(old, existing_hash):
+            return {"success": False, "msg": "기존 PIN이 일치하지 않습니다."}
+
+    users_col.update_one(
+        {"email": canon_email},
+        {
+            "$set": {
+                "simulation_pin_hash": get_password_hash(pin),
+                "simulation_pin_set_at": dt.datetime.now().isoformat(),
+            }
+        },
+    )
+    return {"success": True, "msg": "거래 PIN이 저장되었습니다."}
+
+@app.post("/api/simulation/pin/verify")
+def simulation_pin_verify(payload: SimulationPinVerifyPayload):
+    pin = (payload.pin or "").strip()
+    if len(pin) != 4 or not pin.isdigit():
+        return {"success": False, "msg": "PIN은 4자리 숫자여야 합니다."}
+
+    users_col = get_user_collection()
+    user_doc = find_user_doc_by_email(users_col, payload.email)
+    if not user_doc or not user_doc.get("simulation_pin_hash"):
+        return {"success": False, "msg": "먼저 거래 PIN을 설정해주세요."}
+
+    if verify_password(pin, user_doc["simulation_pin_hash"]):
+        return {"success": True}
+    return {"success": False, "msg": "PIN이 일치하지 않습니다."}
+
+@app.post("/api/user/profile")
+def get_user_profile(payload: SimulationStateGetPayload):
+    users_col = get_user_collection()
+    user_doc = find_user_doc_by_email(users_col, payload.email)
+    if not user_doc:
+        return {"success": False, "msg": "사용자를 찾을 수 없습니다."}
+
+    return {
+        "success": True,
+        "profile": {
+            "username": user_doc.get("username", ""),
+            "email": user_doc.get("email", ""),
+            "created_at": user_doc.get("created_at"),
+            "pin_set": bool(user_doc.get("simulation_pin_hash")),
+            "simulation_pin_set_at": user_doc.get("simulation_pin_set_at"),
+        },
+    }
+
+@app.post("/api/user/update")
+def update_user_profile(payload: UserProfileUpdatePayload):
+    users_col = get_user_collection()
+    user_doc = find_user_doc_by_email(users_col, payload.email)
+    if not user_doc:
+        return {"success": False, "msg": "사용자를 찾을 수 없습니다."}
+
+    current_password = (payload.current_password or "").strip()
+    if not current_password:
+        return {"success": False, "msg": "현재 비밀번호를 입력해주세요."}
+    if not verify_password(current_password, user_doc["password"]):
+        return {"success": False, "msg": "현재 비밀번호가 일치하지 않습니다."}
+
+    canon_email = user_doc["email"]
+    updates = {}
+
+    new_username = (payload.username or "").strip()
+    if new_username and new_username != user_doc.get("username"):
+        updates["username"] = new_username
+
+    new_email_raw = (payload.new_email or "").strip()
+    if new_email_raw:
+        new_email = new_email_raw.lower()
+        if new_email != canon_email.lower():
+            existing = find_user_doc_by_email(users_col, new_email)
+            if existing and existing.get("email", "").lower() != canon_email.lower():
+                return {"success": False, "msg": "이미 사용 중인 이메일입니다."}
+            updates["email"] = new_email
+
+    new_password = (payload.new_password or "").strip()
+    if new_password:
+        if len(new_password) < 4:
+            return {"success": False, "msg": "새 비밀번호는 4자 이상이어야 합니다."}
+        updates["password"] = get_password_hash(new_password)
+
+    if not updates:
+        return {"success": False, "msg": "변경할 항목이 없습니다."}
+
+    users_col.update_one({"email": canon_email}, {"$set": updates})
+
+    next_email = updates.get("email", canon_email)
+    if "email" in updates:
+        sim_col = get_simulation_collection()
+        old_key = canon_email.strip().lower()
+        new_key = next_email.strip().lower()
+        sim_doc = sim_col.find_one({"email": old_key})
+        if sim_doc:
+            sim_doc["email"] = new_key
+            sim_col.delete_one({"email": old_key})
+            sim_col.update_one({"email": new_key}, {"$set": sim_doc}, upsert=True)
+
+    refreshed = users_col.find_one({"email": next_email}) or user_doc
+    return {
+        "success": True,
+        "msg": "계정 정보가 저장되었습니다.",
+        "user": {
+            "username": refreshed.get("username", updates.get("username", user_doc.get("username"))),
+            "email": refreshed.get("email", next_email),
+        },
+    }
+
+@app.post("/api/user/delete")
+def delete_user_account(payload: UserDeletePayload):
+    users_col = get_user_collection()
+    user_doc = find_user_doc_by_email(users_col, payload.email)
+    if not user_doc:
+        return {"success": False, "msg": "사용자를 찾을 수 없습니다."}
+
+    current_password = (payload.current_password or "").strip()
+    if not current_password:
+        return {"success": False, "msg": "현재 비밀번호를 입력해주세요."}
+    if not verify_password(current_password, user_doc["password"]):
+        return {"success": False, "msg": "현재 비밀번호가 일치하지 않습니다."}
+
+    canon_email = user_doc["email"]
+    users_col.delete_one({"email": canon_email})
+
+    sim_col = get_simulation_collection()
+    sim_col.delete_one({"email": canon_email.strip().lower()})
+
+    print(f"[Auth] User account deleted: {canon_email}")
+    return {"success": True, "msg": "회원탈퇴가 완료되었습니다."}
 
 # ==========================================
 # [API 1] 최근 기업 근황 (Recent Status) - 실시간 X API 사용
