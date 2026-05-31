@@ -1,0 +1,131 @@
+{
+  "sector_label2id": {
+    "Communication Services": 0,
+    "Consumer Discretionary": 1,
+    "Consumer Staples": 2,
+    "Energy": 3,
+    "Financials": 4,
+    "Health Care": 5,
+    "Industrials": 6,
+    "Information Technology": 7,
+    "Materials": 8,
+    "Real Estate": 9,
+    "Utilities": 10
+  },
+  "sector_id2label": {
+    "0": "Communication Services",
+    "1": "Consumer Discretionary",
+    "2": "Consumer Staples",
+    "3": "Energy",
+    "4": "Financials",
+    "5": "Health Care",
+    "6": "Industrials",
+    "7": "Information Technology",
+    "8": "Materials",
+    "9": "Real Estate",
+    "10": "Utilities"
+  },
+  "ig_label2id": {
+    "Automobiles & Components": 0,
+    "Banks": 1,
+    "Capital Goods": 2,
+    "Commercial  & Professional Services": 3,
+    "Consumer Discretionary Distribution & Retail": 4,
+    "Consumer Durables & Apparel": 5,
+    "Consumer Services": 6,
+    "Consumer Staples Distribution & Retail": 7,
+    "Energy": 8,
+    "Equity Real Estate Investment Trusts (REITs)": 9,
+    "Financial Services": 10,
+    "Food, Beverage & Tobacco": 11,
+    "Health Care Equipment & Services": 12,
+    "Household & Personal Products": 13,
+    "Insurance": 14,
+    "Materials": 15,
+    "Media & Entertainment": 16,
+    "Pharmaceuticals, Biotechnology & Life Sciences": 17,
+    "Real Estate Management & Development": 18,
+    "Semiconductors & Semiconductor Equipment": 19,
+    "Software & Services": 20,
+    "Technology Hardware & Equipment": 21,
+    "Telecommunication Services": 22,
+    "Transportation": 23,
+    "Utilities": 24
+  },
+  "ig_id2label": {
+    "0": "Automobiles & Components",
+    "1": "Banks",
+    "2": "Capital Goods",
+    "3": "Commercial  & Professional Services",
+    "4": "Consumer Discretionary Distribution & Retail",
+    "5": "Consumer Durables & Apparel",
+    "6": "Consumer Services",
+    "7": "Consumer Staples Distribution & Retail",
+    "8": "Energy",
+    "9": "Equity Real Estate Investment Trusts (REITs)",
+    "10": "Financial Services",
+    "11": "Food, Beverage & Tobacco",
+    "12": "Health Care Equipment & Services",
+    "13": "Household & Personal Products",
+    "14": "Insurance",
+    "15": "Materials",
+    "16": "Media & Entertainment",
+    "17": "Pharmaceuticals, Biotechnology & Life Sciences",
+    "18": "Real Estate Management & Development",
+    "19": "Semiconductors & Semiconductor Equipment",
+    "20": "Software & Services",
+    "21": "Technology Hardware & Equipment",
+    "22": "Telecommunication Services",
+    "23": "Transportation",
+    "24": "Utilities"
+  },
+  "sector_to_ig_mask": {
+    "0": [
+      16,
+      22
+    ],
+    "1": [
+      0,
+      4,
+      5,
+      6
+    ],
+    "2": [
+      7,
+      11,
+      13
+    ],
+    "3": [
+      8
+    ],
+    "4": [
+      1,
+      10,
+      14
+    ],
+    "5": [
+      12,
+      17
+    ],
+    "6": [
+      2,
+      3,
+      23
+    ],
+    "7": [
+      19,
+      20,
+      21
+    ],
+    "8": [
+      15
+    ],
+    "9": [
+      9,
+      18
+    ],
+    "10": [
+      24
+    ]
+  }
+}

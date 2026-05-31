@@ -1,0 +1,23 @@
+{
+  "model_name": "BAAI/bge-m3",
+  "load_from_ic2": true,
+  "epochs": 5,
+  "batch_size": 16,
+  "learning_rate": 2e-05,
+  "max_length": 512,
+  "checkpoint_dir": "IC2/train_history/checkpoint",
+  "loss_weights": {
+    "sector": 0.3,
+    "ig": 0.7
+  },
+  "class_weight_clipping": 5.0,
+  "thresholds": [
+    0.3,
+    0.4,
+    0.5,
+    0.6,
+    0.7,
+    0.8
+  ],
+  "best_threshold": 0.3
+}

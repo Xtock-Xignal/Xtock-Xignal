@@ -1,0 +1,53 @@
+# BERT 학습 하이퍼파라미터 설정
+# config/products_and_services.yaml 과 동일한 디렉터리의 설정 파일
+
+training:
+  # HuggingFace 모델 ID
+  model_name: "classla/multilingual-IPTC-news-topic-classifier"
+
+  # 학습 에폭 수
+  num_epochs: 2
+
+  # 배치 크기
+  batch_size: 8
+
+  # 학습률
+  learning_rate: 0.00005 #5e-5
+
+  # 토크나이저 최대 시퀀스 길이
+  max_length: 256 #384, 512
+
+  # 학습/테스트 분할 비율
+  test_ratio: 0.2
+
+  # 랜덤 시드
+  seed: 42
+
+optimizer:
+  # AdamW weight decay
+  weight_decay: 0.0
+
+  # Adam epsilon
+  adam_epsilon: 0.00000001 #1e-8, epsilon
+
+  # Gradient clipping 최대 노름
+  max_grad_norm: 1.0
+
+loss:
+  # 계층형 분류 가중합 비율 (#1)
+  big_loss_weight: 0.3
+  sub_loss_weight: 0.7
+
+  # sub_sector 클래스 가중치 클리핑 (#2)
+  class_weight_clipping: 5.0
+
+evaluation:
+  # confidence threshold 후보 목록 (#3)
+  thresholds: [0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+
+logging:
+  # 로그 출력 간격 (steps)
+  log_interval: 10
+
+  # 체크포인트 저장 간격 (steps)
+  save_interval: 500

@@ -1,0 +1,1 @@
+"""News ingestion via yfinance."""

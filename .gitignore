@@ -2,7 +2,5 @@ geminiAPI.txt
 __pycache__/
 .omx/
 datasets/
-data/
-pipelines/fasttext/artifacts/
-pipelines/tfidf_randomforest/artifacts/
-pipelines/bert/distill_bert/
+*.pt
+*.png
