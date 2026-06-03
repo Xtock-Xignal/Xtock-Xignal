@@ -1,0 +1,12 @@
+gics_sectors:
+  Energy: Energy
+  Materials: Materials
+  Industrials: Industrials
+  Utilities: Utilities
+  Healthcare: Healthcare
+  Financials: Financials
+  "Consumer Discretionary": Consumer_Discretionary
+  "Consumer Staples": Consumer_Staples
+  "Information Technology": Information_Technology
+  "Communication Services": Communication_Services
+  "Real Estate": Real_Estate
