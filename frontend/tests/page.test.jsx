@@ -54,6 +54,19 @@ vi.mock("@/components/SettingsSection", () => ({
 }));
 
 describe("Home (page)", () => {
+  const loginAndWaitForDashboard = async () => {
+    fireEvent.click(screen.getByText("LOGIN_SCREEN"));
+
+    await screen.findByText("DashboardSection");
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith("/api/user/attendance/check", {
+        email: "test@example.com",
+        date: expect.any(String),
+        amount: 30,
+      });
+    });
+  };
+
   beforeEach(() => {
     localStorage.clear();
     api.post.mockReset();
@@ -109,19 +122,17 @@ describe("Home (page)", () => {
   it("shows the dashboard first after login", async () => {
     render(<Home />);
 
-    fireEvent.click(screen.getByText("LOGIN_SCREEN"));
+    await loginAndWaitForDashboard();
 
-    await waitFor(() => {
-      expect(screen.getByText("DashboardSection")).toBeInTheDocument();
-      expect(screen.queryByText("SearchSection")).not.toBeInTheDocument();
-      expect(screen.queryByText("NewsSimulatorSection")).not.toBeInTheDocument();
-    });
+    expect(screen.getByText("DashboardSection")).toBeInTheDocument();
+    expect(screen.queryByText("SearchSection")).not.toBeInTheDocument();
+    expect(screen.queryByText("NewsSimulatorSection")).not.toBeInTheDocument();
   });
 
   it("switches between stock analysis and news simulation tabs", async () => {
     render(<Home />);
 
-    fireEvent.click(screen.getByText("LOGIN_SCREEN"));
+    await loginAndWaitForDashboard();
     fireEvent.click(await screen.findByRole("button", { name: /종목 분석/ }));
     expect(screen.getByText("SearchSection")).toBeInTheDocument();
 
@@ -132,7 +143,7 @@ describe("Home (page)", () => {
   it("opens the stock simulation tab", async () => {
     render(<Home />);
 
-    fireEvent.click(screen.getByText("LOGIN_SCREEN"));
+    await loginAndWaitForDashboard();
     fireEvent.click(await screen.findByRole("button", { name: /주식 시뮬레이션/ }));
 
     expect(screen.getByText(/StockSimulationSection/)).toBeInTheDocument();
@@ -141,7 +152,7 @@ describe("Home (page)", () => {
   it("opens the backtest tab", async () => {
     render(<Home />);
 
-    fireEvent.click(screen.getByText("LOGIN_SCREEN"));
+    await loginAndWaitForDashboard();
     fireEvent.click(await screen.findByRole("button", { name: /백테스팅/ }));
 
     expect(screen.getByText("BacktestSection")).toBeInTheDocument();
@@ -150,7 +161,7 @@ describe("Home (page)", () => {
   it("loads attendance and quiz rewards from the backend for simulation cash", async () => {
     render(<Home />);
 
-    fireEvent.click(screen.getByText("LOGIN_SCREEN"));
+    await loginAndWaitForDashboard();
     fireEvent.click(await screen.findByText("학습 센터"));
     fireEvent.click(await screen.findByRole("button", { name: "LearningCenter" }));
 

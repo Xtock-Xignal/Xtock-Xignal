@@ -161,7 +161,60 @@ const getWebSocketUrl = (path) => {
   return url.toString();
 };
 
-const capRealtimeRows = (rows, maxLength) => rows.slice(-Math.max(1, maxLength));
+const REALTIME_CHART_MAX_POINTS = 100;
+
+const capRealtimeRows = (rows, maxLength = REALTIME_CHART_MAX_POINTS) =>
+  rows.slice(-Math.max(1, maxLength));
+
+const createRealtimePlaceholderRows = (maxLength = REALTIME_CHART_MAX_POINTS) =>
+  Array.from({ length: maxLength }, (_, index) => ({
+    date: "",
+    xKey: `slot-${String(index + 1).padStart(3, "0")}`,
+    time: "",
+    open: null,
+    high: null,
+    low: null,
+    close: null,
+    volume: null,
+    isPlaceholder: true,
+  }));
+
+const hasRealtimePrice = (row) => Number.isFinite(Number(row?.close)) && Number(row.close) > 0;
+
+const getRealtimeFilledRows = (rows) => (Array.isArray(rows) ? rows.filter(hasRealtimePrice) : []);
+
+const getLastFilledRowIndex = (rows) => {
+  if (!Array.isArray(rows)) return -1;
+  for (let i = rows.length - 1; i >= 0; i -= 1) {
+    if (hasRealtimePrice(rows[i])) return i;
+  }
+  return -1;
+};
+
+const mergeRealtimeTickRow = (rows, nextRow, maxLength = REALTIME_CHART_MAX_POINTS) => {
+  const baseRows = Array.isArray(rows) && rows.length
+    ? rows
+    : createRealtimePlaceholderRows(maxLength);
+  const lastFilledIndex = getLastFilledRowIndex(baseRows);
+  const lastFilledRow = lastFilledIndex >= 0 ? baseRows[lastFilledIndex] : null;
+  const nextKey = nextRow.xKey || nextRow.date;
+
+  if (lastFilledRow && (lastFilledRow.xKey || lastFilledRow.date) === nextKey) {
+    return baseRows.map((row, index) =>
+      index === lastFilledIndex ? { ...lastFilledRow, ...nextRow, isPlaceholder: false } : row
+    );
+  }
+
+  const filledRows = getRealtimeFilledRows(baseRows);
+  if (filledRows.length < maxLength) {
+    const insertIndex = lastFilledIndex + 1;
+    return baseRows.map((row, index) =>
+      index === insertIndex ? { ...nextRow, isPlaceholder: false } : row
+    );
+  }
+
+  return capRealtimeRows([...filledRows, { ...nextRow, isPlaceholder: false }], maxLength);
+};
 
 function enrichWithSma(rows) {
   if (!rows?.length) return [];
@@ -174,10 +227,14 @@ function enrichWithSma(rows) {
         out[key] = null;
       } else {
         let sum = 0;
+        let validCount = 0;
         for (let k = i - p + 1; k <= i; k++) {
-          sum += Number(rows[k].close);
+          const close = Number(rows[k].close);
+          if (!Number.isFinite(close) || close <= 0) break;
+          sum += close;
+          validCount += 1;
         }
-        out[key] = sum / p;
+        out[key] = validCount === p ? sum / p : null;
       }
     }
     return out;
@@ -191,6 +248,7 @@ function CandlestickMarks({ data }) {
   if (!xScale || !yScale || !data?.length) return null;
   // xScale은 상황에 따라 NaN을 줄 수 있으므로, 폭 계산(estW/bw)은 안전하게 폴백한다.
   const safeNumber = (v) => {
+    if (v == null || v === "") return null;
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
   };
@@ -332,6 +390,7 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
   const [priceSeriesBySymbol, setPriceSeriesBySymbol] = useState({}); // { [symbol]: [{date, open, high, low, close, volume}] }
   const [selectedDayBySymbol, setSelectedDayBySymbol] = useState({}); // { [symbol]: index }
   const priceSeriesBySymbolRef = useRef({});
+  const realtimeSeriesBySymbolRef = useRef({});
 
   const [sharesInput, setSharesInput] = useState("1");
 
@@ -494,6 +553,7 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
 
   /** ma: 5·20·60일 SMA + 종가 | candle: OHLC 캔들 */
   const [chartMode, setChartMode] = useState("ma");
+  const effectiveChartMode = activeChartSource === "realtime" ? "ma" : chartMode;
 
   const series = useMemo(
     () => priceSeriesBySymbol[selectedSymbol] || [],
@@ -504,15 +564,26 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
     priceSeriesBySymbolRef.current = priceSeriesBySymbol;
   }, [priceSeriesBySymbol]);
   const chartData = useMemo(() => enrichWithSma(series), [series]);
+  const realtimeFilledPointCount = useMemo(
+    () => (activeChartSource === "realtime" ? getRealtimeFilledRows(series).length : series.length),
+    [activeChartSource, series]
+  );
+  const chartDataCountLabel =
+    activeChartSource === "realtime"
+      ? `${realtimeFilledPointCount}/${REALTIME_CHART_MAX_POINTS}`
+      : series.length
+        ? String(series.length)
+        : "";
   const selectedDayIndex = clamp(
     selectedDayBySymbol[selectedSymbol] ?? (series.length ? series.length - 1 : 0),
     0,
     Math.max(0, series.length - 1)
   );
   const currentRow = series[selectedDayIndex];
-  const currentPrice = Number(currentRow?.close || 0);
-  const currentDate = currentRow?.date || "";
-  const currentXKey = currentRow?.xKey || currentDate;
+  const currentRowHasPrice = hasRealtimePrice(currentRow);
+  const currentPrice = currentRowHasPrice ? Number(currentRow.close) : 0;
+  const currentDate = currentRowHasPrice ? currentRow?.date || "" : "";
+  const currentXKey = currentRowHasPrice ? currentRow?.xKey || currentDate : "";
   const currentTime = activeChartSource === "realtime" ? toRealtimeLabel(currentRow?.time || currentDate) : "";
   const currentDateTimeLabel =
     activeChartSource === "realtime" && currentTime
@@ -613,21 +684,47 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
 
     setLoadingSymbol(true);
     try {
-      const res =
-        source === "historical"
-          ? await api.get(`/api/chart/history/${normalized}`, {
-              params: {
-                start_date: stockStartDateInput,
-                end_date: stockEndDateInput,
-                interval: "1d",
-              },
-            })
-          : await api.get(`/api/chart/history/${normalized}`, {
-              params: {
-                period: "100d",
-                interval: "1d",
-              },
-            });
+      if (source === "realtime") {
+        const savedRealtimeRows = realtimeSeriesBySymbolRef.current[normalized];
+        const realtimeRows = Array.isArray(savedRealtimeRows) && savedRealtimeRows.length
+          ? savedRealtimeRows
+          : createRealtimePlaceholderRows();
+        realtimeSeriesBySymbolRef.current = {
+          ...realtimeSeriesBySymbolRef.current,
+          [normalized]: realtimeRows,
+        };
+        priceSeriesBySymbolRef.current = {
+          ...priceSeriesBySymbolRef.current,
+          [normalized]: realtimeRows,
+        };
+
+        setPriceSeriesBySymbol((prev) => ({
+          ...prev,
+          [normalized]: realtimeRows,
+        }));
+
+        setChartSourceBySymbol((prev) => ({
+          ...prev,
+          [normalized]: source,
+        }));
+
+        setSelectedDayBySymbol((prev) => ({
+          ...prev,
+          [normalized]: Math.max(0, getLastFilledRowIndex(realtimeRows)),
+        }));
+
+        setSelectedSymbol(normalized);
+        if (sourceOverride) setChartSource(source);
+        return;
+      }
+
+      const res = await api.get(`/api/chart/history/${normalized}`, {
+        params: {
+          start_date: stockStartDateInput,
+          end_date: stockEndDateInput,
+          interval: "1d",
+        },
+      });
 
       const rawSeries = res?.data?.rows || [];
       const rawPoints = res?.data?.points || [];
@@ -691,6 +788,9 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
 
   const handleChartSourceChange = (mode) => {
     setChartSource(mode);
+    if (mode === "realtime") {
+      setChartMode("ma");
+    }
     const sym = (symbolInput || selectedSymbol || "").trim().toUpperCase();
     if (sym && sym !== "-") {
       void fetchSymbolSeries(sym, mode);
@@ -716,27 +816,33 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
       if (payload?.type !== "tick") return;
       if (String(payload.symbol || "").toUpperCase() !== selectedSymbol) return;
 
-      const rows = priceSeriesBySymbolRef.current[selectedSymbol] || [];
-      const lastRow = rows[rows.length - 1] || null;
+      const rows =
+        realtimeSeriesBySymbolRef.current[selectedSymbol] ||
+        priceSeriesBySymbolRef.current[selectedSymbol] ||
+        [];
+      const filledRows = getRealtimeFilledRows(rows);
+      const lastRow = filledRows[filledRows.length - 1] || null;
       const nextRow = tickToDailyRealtimeRow(payload, lastRow);
       if (!nextRow) return;
 
-      const nextRows =
-        lastRow && (lastRow.xKey || lastRow.date) === (nextRow.xKey || nextRow.date)
-          ? [...rows.slice(0, -1), { ...lastRow, ...nextRow }]
-          : capRealtimeRows([...rows, nextRow], rows.length);
+      const nextRows = mergeRealtimeTickRow(rows, nextRow, REALTIME_CHART_MAX_POINTS);
 
       const nextSeriesBySymbol = {
         ...priceSeriesBySymbolRef.current,
         [selectedSymbol]: nextRows,
       };
+      realtimeSeriesBySymbolRef.current = {
+        ...realtimeSeriesBySymbolRef.current,
+        [selectedSymbol]: nextRows,
+      };
       priceSeriesBySymbolRef.current = nextSeriesBySymbol;
       setPriceSeriesBySymbol(nextSeriesBySymbol);
 
-      if (nextRows.length > 0) {
+      const lastFilledIndex = getLastFilledRowIndex(nextRows);
+      if (lastFilledIndex >= 0) {
         setSelectedDayBySymbol((selectedPrev) => ({
           ...selectedPrev,
-          [selectedSymbol]: nextRows.length - 1,
+          [selectedSymbol]: lastFilledIndex,
         }));
       }
     };
@@ -1444,10 +1550,10 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
                   ) : null}
                   <span className="text-slate-600"> · </span>
                   <span className="text-slate-500">{volumeLabel}</span>
-                  {chartMode === "ma" ? (
+                  {effectiveChartMode === "ma" ? (
                     <span className="text-slate-600"> · </span>
                   ) : null}
-                  {chartMode === "ma" ? (
+                  {effectiveChartMode === "ma" ? (
                     <span className="text-slate-500">
                       노랑 5일 · 빨강 20일 · 초록 60일 이평
                     </span>
@@ -1457,12 +1563,13 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
               <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
                 <div className="flex flex-wrap gap-1.5 justify-end">
                   {[
-                    { id: "realtime", label: "실시간" },
-                    { id: "historical", label: "과거" },
+                    { id: "realtime", label: "\uC2E4\uC2DC\uAC04" },
+                    { id: "historical", label: "\uACFC\uAC70" },
                   ].map(({ id, label }) => (
                     <button
                       key={id}
                       type="button"
+                      aria-label={`${id} chart`}
                       onClick={() => handleChartSourceChange(id)}
                       disabled={loadingSymbol}
                       className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-50 ${
@@ -1475,27 +1582,30 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
                     </button>
                   ))}
                 </div>
-                <div className="flex flex-wrap gap-1.5 justify-end">
-                  {[
-                    { id: "ma", label: "이평선" },
-                    { id: "candle", label: "캔들" },
-                  ].map(({ id, label }) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => setChartMode(id)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${
-                        chartMode === id
-                          ? "bg-blue-600 border-blue-500 text-white"
-                          : "bg-slate-900/80 border-slate-600 text-slate-300 hover:border-slate-500"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <div className="text-right text-xs text-slate-500">
-                  {series.length ? `데이터: ${series.length}개` : ""}
+                {activeChartSource === "historical" ? (
+                  <div className="flex flex-wrap gap-1.5 justify-end">
+                    {[
+                      { id: "ma", label: "\uC774\uD3C9\uC120" },
+                      { id: "candle", label: "\uCEA0\uB4E4" },
+                    ].map(({ id, label }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        aria-label={`${id} chart mode`}
+                        onClick={() => setChartMode(id)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${
+                          chartMode === id
+                            ? "bg-blue-600 border-blue-500 text-white"
+                            : "bg-slate-900/80 border-slate-600 text-slate-300 hover:border-slate-500"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                <div className="text-right text-xs text-slate-500" data-testid="simulation-chart-data-count">
+                  {chartDataCountLabel ? `\uB370\uC774\uD130: ${chartDataCountLabel}\uAC1C` : ""}
                 </div>
               </div>
             </div>
@@ -1564,8 +1674,8 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
                       radius={[2, 2, 0, 0]}
                       maxBarSize={28}
                     />
-                    {chartMode === "candle" ? <CandlestickMarks data={chartData} /> : null}
-                    {chartMode === "ma" ? (
+                    {effectiveChartMode === "candle" ? <CandlestickMarks data={chartData} /> : null}
+                    {effectiveChartMode === "ma" ? (
                       <>
                         <Line
                           yAxisId="price"
@@ -1609,7 +1719,7 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
                         />
                       </>
                     ) : null}
-                    {chartMode === "candle" ? (
+                    {effectiveChartMode === "candle" ? (
                       <Line
                         yAxisId="price"
                         type="monotone"
