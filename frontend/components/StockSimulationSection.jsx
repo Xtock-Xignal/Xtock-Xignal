@@ -681,14 +681,39 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
     simulationStarted
   );
 
+  // 실시간 모드로 열려 있는 종목은 WebSocket 최신 틱 가격을 우선 사용해 손익을 실시간 반영
+  const realtimePriceBySymbol = useMemo(() => {
+    const result = {};
+    for (const [sym, rows] of Object.entries(priceSeriesBySymbol)) {
+      if (chartSourceBySymbol[sym] !== "realtime") continue;
+      for (let i = rows.length - 1; i >= 0; i--) {
+        const close = Number(rows[i]?.close);
+        if (Number.isFinite(close) && close > 0) {
+          result[sym] = close;
+          break;
+        }
+      }
+    }
+    return result;
+  }, [priceSeriesBySymbol, chartSourceBySymbol]);
+
+  const getEnhancedValuationPrice = useCallback(
+    (symbol) => {
+      const rtPrice = realtimePriceBySymbol[symbol];
+      if (rtPrice > 0) return rtPrice;
+      return getValuationPrice(symbol);
+    },
+    [realtimePriceBySymbol, getValuationPrice]
+  );
+
   const {
     totalValue,
     totalPnl,
     realizedPnl,
     unrealizedPnl,
   } = useMemo(
-    () => computeSimulationMetrics(cash, holdings, getValuationPrice),
-    [cash, holdings, getValuationPrice]
+    () => computeSimulationMetrics(cash, holdings, getEnhancedValuationPrice),
+    [cash, holdings, getEnhancedValuationPrice]
   );
 
   const canTrade = simulationStarted && currentPrice > 0 && pinIsSet && pinStatusLoaded;
@@ -1311,7 +1336,7 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
             ) : (
               <div className="space-y-3 overflow-y-auto custom-scrollbar pr-1" style={{ maxHeight: 200 }}>
                 {holdingList.map(([sym, h]) => {
-                  const px = getValuationPrice(sym);
+                  const px = getEnhancedValuationPrice(sym);
                   const shares = Number(h.shares) || 0;
                   const avg = Number(h.avgCost) || 0;
                   const pnl = (px - avg) * shares;
