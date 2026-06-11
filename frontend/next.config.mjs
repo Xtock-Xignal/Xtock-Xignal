@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   turbopack: {},
+  experimental: {
+    optimizePackageImports: [],
+  },
   webpack: (config) => {
     config.watchOptions = {
       poll: 1000,

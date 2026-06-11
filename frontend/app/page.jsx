@@ -9,7 +9,6 @@ import {
   LogOut,
   Menu,
   Newspaper,
-  Search as SearchIcon,
   Settings,
   User,
   X,
@@ -20,41 +19,37 @@ import DashboardSection from "@/components/DashboardSection";
 import LearningCenter from "@/components/LearningCenter";
 import LoginPage from "@/components/LoginPage";
 import PortfolioSection from "@/components/PortfolioSection";
-import SearchSection from "@/components/SearchSection";
 import SettingsSection from "@/components/SettingsSection";
 import StockSimulationSection from "@/components/StockSimulationSection";
 import NewsSimulatorSection from "@/features/simulator/NewsSimulatorSection";
 import api from "../utils/api";
 
 const MENU_ITEMS = [
-  { id: "dashboard", icon: LayoutDashboard, label: "대시보드" },
-  { id: "search", icon: SearchIcon, label: "종목 분석" },
-  { id: "simulator", icon: Newspaper, label: "뉴스 시뮬레이터" },
+  { id: "dashboard", icon: LayoutDashboard, label: "시장 현황" },
   { id: "learn", icon: BookOpen, label: "학습 센터" },
-  { id: "portfolio", icon: User, label: "포트폴리오" },
+  { id: "simulator", icon: Newspaper, label: "뉴스 시뮬레이터" },
   { id: "simulation", icon: Coins, label: "주식 시뮬레이션" },
+  { id: "portfolio", icon: User, label: "포트폴리오" },
   { id: "backtest", icon: BarChart3, label: "백테스팅" },
   { id: "settings", icon: Settings, label: "설정" },
 ];
 
 const MENU_TITLES = {
-  dashboard: "메인 대시보드",
-  search: "종목 분석",
-  simulator: "뉴스 시뮬레이터",
+  dashboard: "시장 현황",
   learn: "학습 센터",
-  portfolio: "포트폴리오",
+  simulator: "뉴스 시뮬레이터",
   simulation: "주식 시뮬레이션",
+  portfolio: "포트폴리오",
   backtest: "백테스팅",
   settings: "설정",
 };
 
 const MENU_DESCRIPTIONS = {
-  dashboard: "오늘의 시장 흐름과 주요 신호를 빠르게 확인합니다.",
-  search: "종목명이나 티커를 입력해 최근 가격 흐름과 관련 정보를 확인합니다.",
-  simulator: "최신 금융 뉴스를 읽고, 번역·요약·용어 설명으로 문맥을 이해합니다.",
+  dashboard: "오늘의 시장 흐름과 주요 뉴스를 한눈에 확인합니다.",
   learn: "주식 기초 개념을 학습하고 퀴즈 보상으로 시뮬레이션 자금을 늘립니다.",
-  portfolio: "시뮬레이션 보유 종목과 최근 거래 내역을 확인합니다.",
+  simulator: "최신 금융 뉴스를 읽고, 번역·요약·용어 설명으로 문맥을 이해합니다.",
   simulation: "가상 현금으로 매수·매도 흐름을 연습합니다.",
+  portfolio: "시뮬레이션 보유 종목과 최근 거래 내역을 확인합니다.",
   backtest: "과거에 특정 주식을 샀다면 지금 얼마가 되었을지 시뮬레이션합니다.",
   settings: "프로필, 거래 PIN, 시뮬레이션 계좌 상태를 관리합니다.",
 };
@@ -64,10 +59,6 @@ export default function Home() {
   const [activeMenu, setActiveMenu] = useState("dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [todayDate, setTodayDate] = useState("");
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState(null);
 
   const [quizRewardCash, setQuizRewardCash] = useState(0);
   const [attendanceRewardCash, setAttendanceRewardCash] = useState(0);
@@ -172,36 +163,6 @@ export default function Home() {
     return <LoginPage onLogin={(userData) => setUser(userData)} />;
   }
 
-  const handleSearch = async (query) => {
-    setSearchQuery(query);
-    setIsLoading(true);
-    setAnalysisResult(null);
-
-    try {
-      const res = await api.post("/api/match-company", { text: query });
-      if (!res.data.matches || res.data.matches.length === 0) {
-        alert("관련된 과거 분석 사례를 찾을 수 없습니다.");
-        return;
-      }
-
-      const data = res.data.matches[0];
-      setAnalysisResult({
-        tweet: data.tweet,
-        stockData: data.stockData,
-        postIndex: data.postIndex,
-        companyInfo: {
-          name: data.name,
-          financial_summary: data.financial_summary,
-        },
-      });
-    } catch (error) {
-      console.error("Connection Error:", error);
-      alert("서버 연결에 실패했습니다. 백엔드 상태를 확인해주세요.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleLogout = () => {
     setUser(null);
     setRewardHydrated(false);
@@ -301,21 +262,13 @@ export default function Home() {
 
           <div className="animate-fade-in">
             {activeMenu === "dashboard" && <DashboardSection />}
-            {activeMenu === "search" && (
-              <SearchSection
-                searchQuery={searchQuery}
-                isLoading={isLoading}
-                analysisResult={analysisResult}
-                onSearch={handleSearch}
-              />
-            )}
-            {activeMenu === "simulator" && <NewsSimulatorSection />}
             {activeMenu === "learn" && <LearningCenter onQuizCorrect={handleQuizCorrect} />}
-            {activeMenu === "portfolio" && (
-              <PortfolioSection user={user} isActive={activeMenu === "portfolio"} />
-            )}
+            {activeMenu === "simulator" && <NewsSimulatorSection />}
             {activeMenu === "simulation" && (
               <StockSimulationSection rewardCash={totalRewardCash} user={user} />
+            )}
+            {activeMenu === "portfolio" && (
+              <PortfolioSection user={user} isActive={activeMenu === "portfolio"} />
             )}
             {activeMenu === "backtest" && <BacktestSection />}
             {activeMenu === "settings" && (

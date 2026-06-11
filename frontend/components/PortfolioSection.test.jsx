@@ -7,12 +7,14 @@ import api from "../utils/api";
 
 vi.mock("../utils/api", () => ({
   default: {
+    get: vi.fn(),
     post: vi.fn(),
   },
 }));
 
 describe("PortfolioSection", () => {
   beforeEach(() => {
+    api.get.mockReset();
     api.post.mockReset();
   });
 
@@ -43,36 +45,35 @@ describe("PortfolioSection", () => {
   });
 
   it("저장된 시뮬레이션 포트폴리오와 거래 내역을 보여준다", async () => {
-    api.post
-      .mockResolvedValueOnce({
-        data: {
-          success: true,
-          exists: true,
-          state: {
-            cash: 4800,
-            simulation_started: true,
-            holdings: {
-              AAPL: { shares: 2, avgCost: 100, realizedPnl: 0 },
-            },
-            trades: [
-              {
-                id: "trade-1",
-                type: "BUY",
-                symbol: "AAPL",
-                date: "2026-05-25",
-                price: 100,
-                shares: 2,
-                realizedPnl: 0,
-              },
-            ],
+    api.post.mockResolvedValueOnce({
+      data: {
+        success: true,
+        exists: true,
+        state: {
+          cash: 4800,
+          simulation_started: true,
+          holdings: {
+            AAPL: { shares: 2, avgCost: 100, realizedPnl: 0 },
           },
+          trades: [
+            {
+              id: "trade-1",
+              type: "BUY",
+              symbol: "AAPL",
+              date: "2026-05-25",
+              price: 100,
+              shares: 2,
+              realizedPnl: 0,
+            },
+          ],
         },
-      })
-      .mockResolvedValueOnce({
-        data: {
-          stock_data: [{ close: 110 }],
-        },
-      });
+      },
+    });
+    api.get.mockResolvedValueOnce({
+      data: {
+        rows: [{ close: 110 }],
+      },
+    });
 
     render(<PortfolioSection user={{ email: "tester@example.com" }} />);
 

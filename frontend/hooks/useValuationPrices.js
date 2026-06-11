@@ -2,10 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../utils/api";
-import {
-  defaultValuationDateRange,
-  filterActiveHoldings,
-} from "../utils/simulationPortfolio";
+import { filterActiveHoldings } from "../utils/simulationPortfolio";
 
 /**
  * 보유 종목 평가용 최신 종가를 조회합니다. (시뮬레이션·포트폴리오 공통)
@@ -29,7 +26,6 @@ export function useValuationPrices(holdings, enabled = true) {
     }
 
     const symbols = holdingSymbols.split(",");
-    const { start, end } = defaultValuationDateRange();
     let cancelled = false;
 
     (async () => {
@@ -37,13 +33,11 @@ export function useValuationPrices(holdings, enabled = true) {
       await Promise.all(
         symbols.map(async (symbol) => {
           try {
-            const res = await api.post("/api/recent-status", {
-              text: symbol,
-              start_date: start,
-              end_date: end,
+            const res = await api.get(`/api/chart/history/${symbol}`, {
+              params: { period: "5d", interval: "1d" },
             });
-            const series = res?.data?.stock_data || [];
-            const last = series.length ? series[series.length - 1] : null;
+            const rows = res?.data?.rows || [];
+            const last = rows.length ? rows[rows.length - 1] : null;
             next[symbol] = Number(last?.close || 0);
           } catch (e) {
             console.error(`Failed to load valuation price for ${symbol}`, e);

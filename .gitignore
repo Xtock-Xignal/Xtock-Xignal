@@ -25,3 +25,6 @@ build/
 venv/
 env/
 .venv/
+
+# 5. Claude 작업 문서 (로컬 전용)
+.claude/

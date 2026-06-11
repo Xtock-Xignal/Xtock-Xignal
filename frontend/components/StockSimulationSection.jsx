@@ -6,6 +6,7 @@ import { useValuationPrices } from "../hooks/useValuationPrices";
 import { calculateOrderAmounts, computeSimulationMetrics } from "../utils/simulationPortfolio";
 import {
   ComposedChart,
+  Customized,
   Line,
   Bar,
   CartesianGrid,
@@ -14,8 +15,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-  useXAxisScale,
-  useYAxisScale,
+  useXAxisDomain,
+  useYAxisDomain,
   usePlotArea,
 } from "recharts";
 import { TrendingDown, TrendingUp } from "lucide-react";
@@ -276,33 +277,42 @@ function enrichWithSma(rows) {
   });
 }
 
-/** ComposedChart 안에서만 사용 (Recharts 3 scale 훅) */
 function CandlestickMarks({ data }) {
-  const xScale = useXAxisScale(0);
-  const yScale = useYAxisScale("price");
-  if (!xScale || !yScale || !data?.length) return null;
-  // xScale은 상황에 따라 NaN을 줄 수 있으므로, 폭 계산(estW/bw)은 안전하게 폴백한다.
-  const safeNumber = (v) => {
-    if (v == null || v === "") return null;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : null;
+  const xDomain = useXAxisDomain(0);
+  const yDomain = useYAxisDomain("price");
+  const plotArea = usePlotArea();
+
+  if (!Array.isArray(xDomain) || xDomain.length === 0) return null;
+  if (!Array.isArray(yDomain) || yDomain.length < 2) return null;
+  if (!plotArea || !plotArea.width || !plotArea.height) return null;
+  if (!data?.length) return null;
+
+  const n = xDomain.length;
+  const step = plotArea.width / n;
+  const xIndexMap = new Map(xDomain.map((key, i) => [String(key), i]));
+  const bw = Math.max(4, step * 0.55);
+
+  const yMin = Number(yDomain[0]);
+  const yMax = Number(yDomain[yDomain.length - 1]);
+  if (!Number.isFinite(yMin) || !Number.isFinite(yMax) || yMax === yMin) return null;
+
+  const yOf = (val) => {
+    const v = Number(val);
+    if (!Number.isFinite(v)) return null;
+    return plotArea.y + plotArea.height * (1 - (v - yMin) / (yMax - yMin));
   };
 
-  const x0 = data.length >= 1 ? safeNumber(xScale(data[0].xKey || data[0].date)) : null;
-  const x1 = data.length >= 2 ? safeNumber(xScale(data[1].xKey || data[1].date)) : null;
-  const estW = x0 != null && x1 != null ? Math.abs(x1 - x0) : 14;
-  const bw = Number.isFinite(estW) ? Math.max(5, estW * 0.55) : 5;
   return (
     <g className="recharts-candlesticks" pointerEvents="none">
       {data.map((d) => {
-        const xL = xScale(d.xKey || d.date);
-        if (xL == null || Number.isNaN(Number(xL))) return null;
-        const cx = xL + estW / 2;
-        const yH = yScale(Number(d.high));
-        const yLo = yScale(Number(d.low));
-        const yO = yScale(Number(d.open));
-        const yC = yScale(Number(d.close));
-        if ([yH, yLo, yO, yC].some((v) => v == null || Number.isNaN(Number(v)))) return null;
+        const idx = xIndexMap.get(String(d.xKey || d.date));
+        if (idx == null) return null;
+        const cx = plotArea.x + idx * step + step / 2;
+        const yH = yOf(d.high);
+        const yLo = yOf(d.low);
+        const yO = yOf(d.open);
+        const yC = yOf(d.close);
+        if ([yH, yLo, yO, yC].some((v) => v == null)) return null;
         const up = Number(d.close) >= Number(d.open);
         const col = up ? "#22c55e" : "#f87171";
         const bodyTop = Math.min(yO, yC);
@@ -328,32 +338,30 @@ function CandlestickMarks({ data }) {
 
 /** 차트 플롯 영역 클릭으로 거래일 선택 */
 function ChartDayClickBands({ data, selectedIndex, onSelectDay }) {
+  const xDomain = useXAxisDomain(0);
   const plotArea = usePlotArea();
-  const xScale = useXAxisScale(0);
-  if (!plotArea || !xScale || !data?.length) return null;
 
-  const safeNumber = (v) => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : null;
-  };
+  if (!Array.isArray(xDomain) || xDomain.length === 0) return null;
+  if (!plotArea || !plotArea.width || !plotArea.height) return null;
+  if (!data?.length) return null;
 
-  const x0 = data.length >= 1 ? safeNumber(xScale(data[0].xKey || data[0].date)) : null;
-  const x1 = data.length >= 2 ? safeNumber(xScale(data[1].xKey || data[1].date)) : null;
-  const estW = x0 != null && x1 != null ? Math.abs(x1 - x0) : 14;
-  const colW = Math.max(5, estW);
+  const n = xDomain.length;
+  const step = plotArea.width / n;
+  const xIndexMap = new Map(xDomain.map((key, i) => [String(key), i]));
+  const colW = Math.max(5, step);
 
   return (
     <g className="chart-day-click-bands">
       {data.map((d, i) => {
-        const xL = xScale(d.xKey || d.date);
-        if (xL == null || Number.isNaN(Number(xL))) return null;
-        const cx = xL + estW / 2;
+        const idx = xIndexMap.get(String(d.xKey || d.date));
+        if (idx == null) return null;
+        const cx = plotArea.x + idx * step + step / 2;
         const isSelected = i === selectedIndex;
         return (
           <rect
             key={String(d.xKey || d.date)}
             x={cx - colW / 2}
-            y={0}
+            y={plotArea.y}
             width={colW}
             height={plotArea.height}
             fill={isSelected ? "rgba(251, 191, 36, 0.12)" : "transparent"}
@@ -372,7 +380,7 @@ function ChartDayClickBands({ data, selectedIndex, onSelectDay }) {
   );
 }
 
-function ChartOhlcTooltip({ active, payload, label }) {
+function ChartOhlcTooltip({ active, payload, label, isRealtime, sessionHigh, sessionLow }) {
   if (!active || !payload?.length) return null;
   const row = payload[0]?.payload;
   if (!row) return null;
@@ -380,10 +388,24 @@ function ChartOhlcTooltip({ active, payload, label }) {
     <div className="bg-slate-900/95 border border-slate-600 p-3 rounded-lg shadow-xl text-sm text-slate-100 min-w-[10rem]">
       <div className="font-semibold text-white mb-2 border-b border-slate-700 pb-1">{label}</div>
       <div className="space-y-1 text-xs">
-        <div className="text-blue-300 font-medium">종가: {formatMoney(row.close)}</div>
-        <div className="text-slate-300">시가: ${Number(row.open).toLocaleString()}</div>
-        <div className="text-slate-300">고가: ${Number(row.high).toLocaleString()}</div>
-        <div className="text-slate-300">저가: ${Number(row.low).toLocaleString()}</div>
+        {isRealtime ? (
+          <>
+            <div className="text-blue-300 font-medium">현재가: {formatMoney(row.close)}</div>
+            <div className="text-slate-300">
+              고가: {sessionHigh != null ? `$${Number(sessionHigh).toLocaleString()}` : "—"}
+            </div>
+            <div className="text-slate-300">
+              저가: {sessionLow != null ? `$${Number(sessionLow).toLocaleString()}` : "—"}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="text-blue-300 font-medium">종가: {formatMoney(row.close)}</div>
+            <div className="text-slate-300">시가: ${Number(row.open).toLocaleString()}</div>
+            <div className="text-slate-300">고가: ${Number(row.high).toLocaleString()}</div>
+            <div className="text-slate-300">저가: ${Number(row.low).toLocaleString()}</div>
+          </>
+        )}
         <div className="text-slate-500 pt-1 border-t border-slate-800 mt-1">
           거래량: {hasVolume(row) ? Number(row.volume).toLocaleString() : "제공 안 됨"}
         </div>
@@ -603,6 +625,15 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
     () => (activeChartSource === "realtime" ? chartData.findIndex(hasRealtimePrice) : 0),
     [activeChartSource, chartData]
   );
+
+  const realtimeSessionHighLow = useMemo(() => {
+    if (activeChartSource !== "realtime" || !selectedSymbol || selectedSymbol === "-") return null;
+    const prices = series
+      .map((r) => Number(r.close))
+      .filter((p) => Number.isFinite(p) && p > 0);
+    if (!prices.length) return null;
+    return { high: Math.max(...prices), low: Math.min(...prices) };
+  }, [activeChartSource, series, selectedSymbol]);
   const realtimeFilledPointCount = useMemo(
     () => (activeChartSource === "realtime" ? getRealtimeFilledRows(series).length : series.length),
     [activeChartSource, series]
@@ -1690,7 +1721,14 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
                       domain={[0, "auto"]}
                     />
                     <Tooltip
-                      content={<ChartOhlcTooltip />}
+                      content={(props) => (
+                        <ChartOhlcTooltip
+                          {...props}
+                          isRealtime={activeChartSource === "realtime"}
+                          sessionHigh={realtimeSessionHighLow?.high}
+                          sessionLow={realtimeSessionHighLow?.low}
+                        />
+                      )}
                       shared
                       allowEscapeViewBox={{ x: false, y: true }}
                       cursor={{ stroke: "#94a3b8", strokeWidth: 1, strokeDasharray: "4 4" }}
@@ -1720,7 +1758,11 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
                       radius={[2, 2, 0, 0]}
                       maxBarSize={28}
                     />
-                    {effectiveChartMode === "candle" ? <CandlestickMarks data={chartData} /> : null}
+                    {effectiveChartMode === "candle" ? (
+                      <Customized
+                        component={() => <CandlestickMarks data={chartData} />}
+                      />
+                    ) : null}
                     {effectiveChartMode === "ma" ? (
                       <>
                         <Line
@@ -1777,10 +1819,14 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
                         activeDot={{ r: 6, strokeWidth: 0, fill: "#fff" }}
                       />
                     ) : null}
-                    <ChartDayClickBands
-                      data={chartData}
-                      selectedIndex={selectedDayIndex}
-                      onSelectDay={handleSelectChartDay}
+                    <Customized
+                      component={() => (
+                        <ChartDayClickBands
+                          data={chartData}
+                          selectedIndex={selectedDayIndex}
+                          onSelectDay={handleSelectChartDay}
+                        />
+                      )}
                     />
                   </ComposedChart>
                 </ResponsiveContainer>

@@ -23,10 +23,6 @@ vi.mock("@/components/DashboardSection", () => ({
   default: () => <div>DashboardSection</div>,
 }));
 
-vi.mock("@/components/SearchSection", () => ({
-  default: () => <div>SearchSection</div>,
-}));
-
 vi.mock("@/features/simulator/NewsSimulatorSection", () => ({
   default: () => <div>NewsSimulatorSection</div>,
 }));
@@ -125,16 +121,15 @@ describe("Home (page)", () => {
     await loginAndWaitForDashboard();
 
     expect(screen.getByText("DashboardSection")).toBeInTheDocument();
-    expect(screen.queryByText("SearchSection")).not.toBeInTheDocument();
     expect(screen.queryByText("NewsSimulatorSection")).not.toBeInTheDocument();
   });
 
-  it("switches between stock analysis and news simulation tabs", async () => {
+  it("switches between learning center and news simulation tabs", async () => {
     render(<Home />);
 
     await loginAndWaitForDashboard();
-    fireEvent.click(await screen.findByRole("button", { name: /종목 분석/ }));
-    expect(screen.getByText("SearchSection")).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: /학습 센터/ }));
+    expect(screen.getByRole("button", { name: "LearningCenter" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /뉴스 시뮬레이터/ }));
     expect(screen.getByText("NewsSimulatorSection")).toBeInTheDocument();
