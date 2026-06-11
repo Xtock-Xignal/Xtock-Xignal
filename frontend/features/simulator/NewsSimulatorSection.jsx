@@ -9,7 +9,6 @@ import {
   Database,
   Languages,
   Loader2,
-  MessageSquareText,
   RefreshCw,
   Search,
   Sparkles,
@@ -56,7 +55,7 @@ export default function NewsSimulatorSection() {
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingNews, setIsLoadingNews] = useState(true);
-  const [symbolInput, setSymbolInput] = useState(DEFAULT_SYMBOLS);
+  const [symbolInput, setSymbolInput] = useState("");
 
   const [matchedTerms, setMatchedTerms] = useState([]);
   const [isScanning, setIsScanning] = useState(false);
@@ -74,13 +73,6 @@ export default function NewsSimulatorSection() {
     isLoading: false,
     term: "",
     data: null,
-    error: false,
-  });
-  const [aiModal, setAiModal] = useState({
-    isOpen: false,
-    isLoading: false,
-    selectedText: "",
-    answer: "",
     error: false,
   });
 
@@ -161,7 +153,7 @@ export default function NewsSimulatorSection() {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (!e.target.closest("#ai-tooltip")) {
+      if (!e.target.closest("#ai-tooltip-btn")) {
         setTooltip({ show: false, x: 0, y: 0, text: "" });
       }
     };
@@ -268,37 +260,6 @@ export default function NewsSimulatorSection() {
     }
   };
 
-  const handleAskAi = async () => {
-    const selectedText = tooltip.text;
-    if (!selectedText || !selectedArticle) return;
-    setTooltip({ show: false, x: 0, y: 0, text: "" });
-    setAiModal({ isOpen: true, isLoading: true, selectedText, answer: "", error: false });
-
-    try {
-      const res = await api.post("/api/news/context-question", {
-        selected_text: selectedText,
-        article_title: selectedArticle.title,
-        article_text: selectedArticle.original,
-      });
-      setAiModal({
-        isOpen: true,
-        isLoading: false,
-        selectedText,
-        answer: res.data?.answer || "답변을 만들 수 없습니다.",
-        error: false,
-      });
-    } catch (error) {
-      console.error("AI 질문 실패:", error);
-      setAiModal({
-        isOpen: true,
-        isLoading: false,
-        selectedText,
-        answer: "",
-        error: true,
-      });
-    }
-  };
-
   const renderHighlightedText = (text) => {
     if (!text || !matchedTerms.length) return text;
 
@@ -400,11 +361,6 @@ export default function NewsSimulatorSection() {
                       <span className="rounded bg-slate-700 px-2 py-1 text-xs font-bold text-slate-300">
                         {news.source || "News"}
                       </span>
-                      {news.is_vip && (
-                        <span className="rounded bg-blue-600 px-2 py-1 text-xs font-bold text-white">
-                          S&P 500 관련
-                        </span>
-                      )}
                       {renderIndustryBadge(news.industry_classification)}
                     </div>
                     <span className="text-sm text-slate-400">{formatDate(news.date)}</span>
@@ -460,11 +416,6 @@ export default function NewsSimulatorSection() {
               <span className="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-slate-300">
                 {selectedArticle.source}
               </span>
-              {selectedArticle.is_vip && (
-                <span className="rounded bg-blue-600 px-2 py-0.5 font-bold text-white">
-                  S&P 500 관련
-                </span>
-              )}
               {renderIndustryBadge(selectedArticle.industry_classification)}
               {(selectedArticle.related_tags || []).map((tag) => (
                 <button
@@ -543,38 +494,34 @@ export default function NewsSimulatorSection() {
             )}
           </div>
 
-          <div className="mt-8 rounded-lg border border-blue-900/50 bg-blue-900/20 p-4 text-sm text-slate-400">
-            기사에서 모르는 단어나 문장을 드래그하면 AI 질문과 용어 검색을 바로 사용할 수 있습니다.
+          <div className="mt-8 flex items-start gap-3 rounded-lg border border-blue-900/50 bg-blue-900/20 p-4 select-none">
+            <span className="text-xl text-blue-400">💡</span>
+            <p className="text-sm text-slate-400">
+              파란색으로{" "}
+              <strong className="rounded bg-blue-500/20 px-1 text-blue-300">강조된 단어</strong>를
+              클릭하거나, 모르는 단어를 마우스로{" "}
+              <strong className="text-slate-200">드래그</strong>해보세요.
+              AI 금융 사전이 즉시 뜻을 알려드립니다. 검색된 용어는 DB에 저장되어 다음 검색은 더 빠릅니다.
+            </p>
           </div>
         </div>
       )}
 
       {tooltip.show && (
-        <div
-          id="ai-tooltip"
+        <button
+          id="ai-tooltip-btn"
+          onClick={() => handleSearchDictionary()}
           style={{
             position: "fixed",
             left: `${tooltip.x}px`,
             top: `${tooltip.y}px`,
             transform: "translateX(-50%)",
           }}
-          className="z-50 flex overflow-hidden rounded-full border border-slate-600 bg-slate-950 shadow-lg shadow-black/50"
+          className="z-50 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-black/50 hover:from-blue-500 hover:to-purple-500"
         >
-          <button
-            onClick={handleAskAi}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600"
-          >
-            <MessageSquareText size={16} />
-            AI에게 질문
-          </button>
-          <button
-            onClick={() => handleSearchDictionary()}
-            className="inline-flex items-center gap-2 border-l border-slate-700 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-600"
-          >
-            <Search size={16} />
-            용어 뜻
-          </button>
-        </div>
+          <Search size={16} />
+          &quot;{tooltip.text}&quot; 뜻 보기
+        </button>
       )}
 
       {dictModal.isOpen && (
@@ -605,23 +552,6 @@ export default function NewsSimulatorSection() {
         </Modal>
       )}
 
-      {aiModal.isOpen && (
-        <Modal onClose={() => setAiModal((prev) => ({ ...prev, isOpen: false }))}>
-          <h3 className="mb-2 pr-8 text-xl font-bold text-white">AI 문맥 설명</h3>
-          <p className="mb-4 rounded-lg bg-slate-800 px-3 py-2 text-sm text-blue-200">
-            {aiModal.selectedText}
-          </p>
-          {aiModal.isLoading ? (
-            <LoadingText text="기사 문맥을 바탕으로 답변을 만드는 중입니다." />
-          ) : aiModal.error ? (
-            <p className="py-6 text-center text-red-400">AI 답변을 불러오지 못했습니다.</p>
-          ) : (
-            <p className="whitespace-pre-wrap break-keep rounded-xl bg-slate-800 p-4 leading-relaxed text-slate-200">
-              {aiModal.answer}
-            </p>
-          )}
-        </Modal>
-      )}
     </div>
   );
 }

@@ -229,7 +229,7 @@ async def search_term(keyword: str):
         """
 
         # 2. 최신 SDK로 API 호출
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=prompt
@@ -282,17 +282,18 @@ async def ask_context_question(req: ContextQuestionRequest):
     article_text = (req.article_text or "")[:2500]
     question = (req.question or "").strip() or "선택한 부분이 기사 문맥에서 무슨 의미인지 초보자도 이해하기 쉽게 설명해줘."
 
-    if not os.getenv("GEMINI_API_KEY"):
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if not api_key:
         return {
             "answer": (
                 f"선택한 표현: {selected}\n"
                 "AI API 키가 설정되어 있지 않아 실시간 답변을 만들 수 없습니다. "
-                "GEMINI_API_KEY를 설정하면 기사 문맥을 바탕으로 설명합니다."
+                "GEMINI_API_KEY 또는 GOOGLE_API_KEY를 설정하면 기사 문맥을 바탕으로 설명합니다."
             )
         }
 
     try:
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        client = genai.Client(api_key=api_key)
         prompt = f"""
         너는 초보 투자자를 돕는 금융 기사 해설자다.
         사용자가 기사에서 선택한 단어나 문장을 기사 문맥 안에서 설명한다.
@@ -336,8 +337,8 @@ async def get_ai_summary(req: SummaryRequest):
             return {"summary": existing_news["summary"]}
         
     try:
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
+
         # 503 에러 방지 (1500자 내외)
         if len(req.text) <= 1500:
             safe_text = req.text
