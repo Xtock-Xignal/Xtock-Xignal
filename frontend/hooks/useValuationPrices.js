@@ -28,7 +28,7 @@ export function useValuationPrices(holdings, enabled = true) {
     const symbols = holdingSymbols.split(",");
     let cancelled = false;
 
-    (async () => {
+    const fetchPrices = async () => {
       const next = {};
       await Promise.all(
         symbols.map(async (symbol) => {
@@ -46,10 +46,14 @@ export function useValuationPrices(holdings, enabled = true) {
         })
       );
       if (!cancelled) setLatestPriceBySymbol(next);
-    })();
+    };
+
+    fetchPrices();
+    const intervalId = window.setInterval(fetchPrices, 10_000);
 
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
     };
   }, [holdingSymbols, enabled]);
 
