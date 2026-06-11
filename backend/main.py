@@ -1382,7 +1382,7 @@ def health_check():
 #         raise HTTPException(status_code=404, detail="Not enough data to compute return")
 #     return result
 
-
+c
 # @app.post("/api/tweet-impact")
 # def tweet_impact(payload: TweetImpactRequest):
 #     """

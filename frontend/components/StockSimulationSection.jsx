@@ -55,28 +55,49 @@ const normalizeMarketTime = (timeValue) => {
   return raw;
 };
 
-const toRealtimeLabel = (timeValue) => {
+const padDatePart = (value) => String(value).padStart(2, "0");
+
+const parseMarketDate = (timeValue) => {
   const normalized = normalizeMarketTime(timeValue);
-  if (!normalized) return "";
+  if (!normalized) return null;
   const d = new Date(normalized);
-  if (Number.isFinite(d.getTime())) return d.toISOString().slice(11, 19);
-  return String(normalized).slice(11, 19) || String(normalized);
+  return Number.isFinite(d.getTime()) ? d : null;
+};
+
+const formatLocalDate = (date) =>
+  `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`;
+
+const formatLocalTime = (date) =>
+  `${padDatePart(date.getHours())}:${padDatePart(date.getMinutes())}:${padDatePart(date.getSeconds())}`;
+
+const toLocalMarketDate = (timeValue) => {
+  const d = parseMarketDate(timeValue);
+  if (d) return formatLocalDate(d);
+  return String(timeValue || "").slice(0, 10);
+};
+
+const toLocalMarketTime = (timeValue) => {
+  const d = parseMarketDate(timeValue);
+  if (d) return formatLocalTime(d);
+  return String(timeValue || "").slice(11, 19) || String(timeValue || "");
+};
+
+const toLocalMarketDateTimeLabel = (timeValue) => {
+  const d = parseMarketDate(timeValue);
+  if (d) return `${formatLocalDate(d)} ${formatLocalTime(d)}`;
+  return String(timeValue || "");
+};
+
+const toRealtimeLabel = (timeValue) => {
+  return toLocalMarketTime(timeValue);
 };
 
 const toMarketDate = (timeValue) => {
-  const normalized = normalizeMarketTime(timeValue);
-  if (!normalized) return "";
-  const d = new Date(normalized);
-  if (Number.isFinite(d.getTime())) return d.toISOString().slice(0, 10);
-  return String(normalized).slice(0, 10);
+  return toLocalMarketDate(timeValue);
 };
 
 const toMarketDateTimeLabel = (timeValue) => {
-  const normalized = normalizeMarketTime(timeValue);
-  if (!normalized) return "";
-  const d = new Date(normalized);
-  if (Number.isFinite(d.getTime())) return `${d.toISOString().slice(0, 10)} ${d.toISOString().slice(11, 19)}`;
-  return String(normalized);
+  return toLocalMarketDateTimeLabel(timeValue);
 };
 
 const pointToRealtimeRow = (point, previousRow = null) => {
@@ -84,12 +105,13 @@ const pointToRealtimeRow = (point, previousRow = null) => {
   if (!Number.isFinite(price) || price <= 0) return null;
 
   const normalizedTime = normalizeMarketTime(point?.time);
-  const label = toRealtimeLabel(normalizedTime) || String(point?.time || "");
+  const label = toMarketDateTimeLabel(normalizedTime) || String(point?.time || "");
+  const date = toMarketDate(normalizedTime) || String(point?.time || "");
   const previousClose = Number(previousRow?.close);
   const open = Number.isFinite(previousClose) && previousClose > 0 ? previousClose : price;
 
   return {
-    date: label,
+    date,
     xKey: label,
     time: normalizedTime || label,
     open,
@@ -106,7 +128,7 @@ const tickToDailyRealtimeRow = (tick, previousRow = null) => {
   if (!Number.isFinite(price) || price <= 0) return null;
 
   const tickTime = normalizeMarketTime(tickRow?.time || tick?.time || tickRow?.date);
-  const tickDate = toMarketDate(tickRow?.date || tickTime) || new Date().toISOString().slice(0, 10);
+  const tickDate = toMarketDate(tickRow?.date || tickTime) || formatLocalDate(new Date());
   const previousClose = Number(previousRow?.close);
   const rowOpen = Number(tickRow?.open);
   const open = Number.isFinite(rowOpen) && rowOpen > 0
@@ -189,6 +211,19 @@ const getLastFilledRowIndex = (rows) => {
     if (hasRealtimePrice(rows[i])) return i;
   }
   return -1;
+};
+
+const formatChartXAxisTick = (value, index, source, firstRealtimeIndex = 0) => {
+  const raw = String(value || "");
+  if (!raw || raw.startsWith("slot-")) return "";
+
+  if (source === "realtime") {
+    return index === firstRealtimeIndex
+      ? toLocalMarketDateTimeLabel(raw)
+      : toLocalMarketTime(raw);
+  }
+
+  return raw.length > 10 ? raw.slice(5, 16) : raw.slice(5);
 };
 
 const mergeRealtimeTickRow = (rows, nextRow, maxLength = REALTIME_CHART_MAX_POINTS) => {
@@ -564,6 +599,10 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
     priceSeriesBySymbolRef.current = priceSeriesBySymbol;
   }, [priceSeriesBySymbol]);
   const chartData = useMemo(() => enrichWithSma(series), [series]);
+  const firstRealtimePointIndex = useMemo(
+    () => (activeChartSource === "realtime" ? chartData.findIndex(hasRealtimePrice) : 0),
+    [activeChartSource, chartData]
+  );
   const realtimeFilledPointCount = useMemo(
     () => (activeChartSource === "realtime" ? getRealtimeFilledRows(series).length : series.length),
     [activeChartSource, series]
@@ -1586,7 +1625,7 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
                   <div className="flex flex-wrap gap-1.5 justify-end">
                     {[
                       { id: "ma", label: "\uC774\uD3C9\uC120" },
-                      { id: "candle", label: "\uCEA0\uB4E4" },
+                      { id: "candle", label: "\uCE94\uB4E4" },
                     ].map(({ id, label }) => (
                       <button
                         key={id}
@@ -1624,7 +1663,14 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
                     <XAxis
                       dataKey="xKey"
                       tick={{ fill: "#94a3b8", fontSize: 12 }}
-                      tickFormatter={(val) => String(val).length > 10 ? String(val).slice(5, 16) : String(val).slice(5)}
+                      tickFormatter={(val, index) =>
+                        formatChartXAxisTick(
+                          val,
+                          index,
+                          activeChartSource,
+                          firstRealtimePointIndex >= 0 ? firstRealtimePointIndex : 0
+                        )
+                      }
                       minTickGap={20}
                       interval="preserveStartEnd"
                     />
