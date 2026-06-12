@@ -19,7 +19,6 @@ from app.api.terms import router as terms_router
 from app.services import backtest_service
 from chart.router import router as chart_router
 from simulation.router import router as simulation_router
-from search_service import search_engine
 
 load_dotenv()
 

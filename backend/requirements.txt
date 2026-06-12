@@ -9,9 +9,6 @@ websockets
 
 numpy<2.0
 yfinance
-chromadb
-sentence-transformers
-torch
 optuna
 tqdm
 
