@@ -1,10 +1,8 @@
 import os
 import re
 import datetime as dt
-from typing import Optional, List
+from typing import Optional
 from contextlib import asynccontextmanager
-import json
-import pandas as pd
 import yfinance as yf
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -151,21 +149,7 @@ NAME_TO_TICKER = {
     "UNITY": "U", "유니티": "U"
 }
 
-MONGODB_URI = os.getenv("MONGODB_URI")
-MONGODB_NAME = os.getenv("MONGODB_NAME", "xtock_xignal")
-MONGODB_COLLECTION_LOGS = "search_history"
-
 mongo_client = None
-search_log_col = None
-
-if MONGODB_URI:
-    try:
-        mongo_client = MongoClient(MONGODB_URI)
-        db = mongo_client[MONGODB_NAME]
-        search_log_col = db[MONGODB_COLLECTION_LOGS]
-        print("[DB] MongoDB Connected for Logging.")
-    except Exception as e:
-        print(f"[DB] Connection Failed: {e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -679,160 +663,3 @@ def delete_user_account(payload: UserDeletePayload):
 def health_check():
     return {"status": "ok", "mongodb": mongo_client is not None}
 
-# @app.get("/api/tweets")
-# async def get_tweets(
-#     q: str = Query(..., description="검색 쿼리 ($TSLA, Elon Musk 등)"),
-#     max_results: int = Query(10, ge=10, le=100),
-#     next_token: Optional[str] = Query(None),
-# ):
-#     """X(Twitter) 트윗 검색"""
-#     data = await call_x_recent_search(q, max_results=max_results, next_token=next_token)
-#     return {"query": q, "max_results": max_results, "raw": data}
-
-
-# @app.get("/api/price")
-# def get_price_history_endpoint(symbol: str, start: str, end: str):
-#     """주가 히스토리 조회"""
-#     data = fetch_price_history(symbol, start, end)
-#     return {"symbol": symbol, "start": start, "end": end, "prices": data}
-
-
-# @app.get("/api/next-return")
-# def get_next_day_return(symbol: str, date: str):
-#     """특정 날짜 기준 수익률 계산 조회"""
-#     result = calculate_next_day_return(symbol, date)
-#     if result is None:
-#         raise HTTPException(status_code=404, detail="Not enough data to compute return")
-#     return result
-
-
-# @app.post("/api/tweet-impact")
-# def tweet_impact(payload: TweetImpactRequest):
-#     """
-#     [ETL Pipeline] 트윗 정보 수신 -> 날짜 추출 -> 수익률 계산 -> DB 저장
-#     """
-#     # 1. 날짜 추출
-#     try:
-#         base_date = infer_base_date_from_tweet_created_at(payload.tweet_created_at)
-#         base_date_str = base_date.strftime("%Y-%m-%d")
-#     except Exception as e:
-#         raise HTTPException(status_code=400, detail=f"Invalid date format: {e}")
-
-#     # 2. 수익률 계산
-#     result = calculate_next_day_return(payload.symbol, base_date_str)
-#     if result is None:
-#         raise HTTPException(status_code=404, detail="Market data not found for calculation")
-
-#     # 3. 데이터 조립 (MongoDB Schema)
-#     doc = {
-#         "tweet_id": payload.tweet_id,  # Unique Key
-#         "symbol": payload.symbol,
-#         "tweet_text": payload.tweet_text,
-#         "tweet_created_at": payload.tweet_created_at,
-        
-#         # 계산된 주가 정보
-#         "base_date": result["base_date"],
-#         "base_close": result["base_close"],
-#         "next_date": result["next_date"],
-#         "next_close": result["next_close"],
-#         "next_day_return": result["next_day_return"],
-        
-#         # 시스템 메타데이터
-#         "created_at_system": dt.datetime.utcnow(),
-        
-#     }
-
-#     # 4. MongoDB 저장 (Upsert)
-#     if tweet_impact_col is not None:
-#         try:
-#             tweet_impact_col.update_one(
-#                 {"tweet_id": payload.tweet_id}, 
-#                 {"$set": doc}, 
-#                 upsert=True
-#             )
-#             print(f"Saved impact data for {payload.symbol} (Tweet ID: {payload.tweet_id})")
-#         except Exception as e:
-#             print(f"MongoDB Save Error: {e}")
-#     else:
-#         print("MongoDB not connected! Data NOT saved.")
-
-#     return doc
-
-
-# @app.post("/api/match-company")
-# def match_company(payload: SearchRequest):
-#     """
-#     [Main Scenario]
-#     1. 사용자 검색어 수신
-#     2. 연관된 과거 사건 후보군 탐색 -> 랜덤 1개 선택 (Dynamic Simulation)
-#     3. 해당 시점의 주가 데이터 및 수익률 계산
-#     4. 검색 로그 MongoDB 저장 (Data Accumulation)
-#     5. 최종 결과 반환
-#     """
-#     query = payload.text.strip()
-#     print(f"Analyzing Request: {query}")
-    
-#     # 1. 후보군 탐색
-#     candidates = find_impact_candidates(query)
-    
-#     # 검색 결과가 없으면 랜덤으로 예시(Demo) 보여주기
-#     if not candidates:
-#         print("No match. Picking random sample.")
-#         tweet = random.choice(IMPACT_TWEETS)
-#         note_prefix = "[Demo: 검색어와 무관한 예시] "
-#         is_exact_match = False
-#     else:
-#         tweet = random.choice(candidates) # 매번 다른 사례를 보여줌
-#         note_prefix = ""
-#         is_exact_match = True
-    
-#     print(f"Selected Case: {tweet['id']} ({tweet['symbol']})")
-    
-#     # 2. 주가 데이터 및 수익률 조회
-#     stock_data, post_index, impact_return = fetch_historical_chart_data(tweet['symbol'], tweet['created_at'])
-    
-#     if not stock_data:
-#         return {"matches": [], "note": "Failed to fetch price data."}
-
-#     # 3. MongoDB 로그 저장 (Log History)
-#     if search_log_col is not None:
-#         try:
-#             log_entry = {
-#                 "query": query,
-#                 "matched_symbol": tweet['symbol'],
-#                 "matched_event_id": tweet['id'],
-#                 "impact_return": impact_return,
-#                 "is_exact_match": is_exact_match,
-#                 "timestamp": dt.datetime.utcnow()
-#             }
-#             search_log_col.insert_one(log_entry)
-#             print(f"Log saved to MongoDB.")
-#         except Exception as e:
-#             print(f"Log Save Error: {e}")
-
-#     # 4. 결과 조립 (Frontend Compatible)
-#     result = {
-#         "symbol": tweet['symbol'],
-#         "name": tweet['symbol'], # 필요 시 이름 매핑 가능
-#         "score": 0.99, # 매칭 신뢰도
-#         # note를 financial_summary에 넣어서 프론트엔드가 보여주게 함
-#         "financial_summary": f"{note_prefix} 학습 포인트: {tweet['note']}",
-        
-#         # 트윗 정보
-#         "tweet": {
-#             "author_id": tweet['author_id'],
-#             "text": tweet['text'],
-#             "created_at": tweet['created_at'],
-#             "impact_return": impact_return # 프론트엔드에서 색깔 표시용 등으로 사용 가능
-#         },
-        
-#         # 차트 데이터
-#         "stockData": stock_data,
-#         "postIndex": post_index
-#     }
-    
-#     return {
-#         "input_text": query,
-#         "matches": [result], 
-#         "note": "Historical Impact Analysis Mode"
-#     }
