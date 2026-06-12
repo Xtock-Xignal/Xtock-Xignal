@@ -9,6 +9,7 @@ services:
       - ./backend/chroma_db:/app/chroma_db
     env_file:
       - .env
+      - backend/.env
     environment:
       - WATCHFILES_FORCE_POLLING=true
     depends_on:

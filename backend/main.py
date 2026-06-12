@@ -155,7 +155,7 @@ NAME_TO_TICKER = {
 }
 
 MONGODB_URI = os.getenv("MONGODB_URI")
-MONGODB_NAME = os.getenv("MONGODB_NAME", "xtock")
+MONGODB_NAME = os.getenv("MONGODB_NAME", "xtock_xignal")
 MONGODB_COLLECTION_LOGS = "search_history"
 
 mongo_client = None
@@ -664,7 +664,7 @@ def delete_user_account(payload: UserDeletePayload):
     sim_col = get_simulation_collection()
     sim_col.delete_one({"email": canon_email.strip().lower()})
 
-    sim_db_names = {os.getenv("MONGODB_DB_NAME", "xtock"), "xtock_db"}
+    sim_db_names = {os.getenv("MONGODB_NAME", "xtock_xignal"), "xtock_db"}
     for db_name in sim_db_names:
         sim_db = mongo_client[db_name]
         sim_users = sim_db["simulation_users"]
