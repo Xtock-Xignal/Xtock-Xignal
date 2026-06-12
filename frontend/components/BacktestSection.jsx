@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { CircleHelp } from "lucide-react";
 import api from "../utils/api";
+import { SP500_SECTORS } from "../data/sp500Sectors";
 
 const QUICK_SYMBOLS = ["AAPL", "MSFT", "TSLA", "NVDA", "AMZN", "GOOGL", "JPM", "XOM", "JNJ", "BND", "SPY", "TLT", "GLD", "BRK.B"];
 const INITIAL_CASH_PRESETS = [50000, 100000, 300000, 1000000];
@@ -80,7 +81,8 @@ export default function BacktestSection() {
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
   const [symbolCatalog, setSymbolCatalog] = useState([]);
-  const [symbolQuery, setSymbolQuery] = useState("");
+  const [activeSector, setActiveSector] = useState(SP500_SECTORS[0].id);
+  const [selectedTickerInfo, setSelectedTickerInfo] = useState(null);
   const [basketRows, setBasketRows] = useState([DEFAULT_BASKET_ROW]);
   const [hoveredSymbol, setHoveredSymbol] = useState("");
   const [selectedInfoSymbol, setSelectedInfoSymbol] = useState("");
@@ -406,19 +408,6 @@ export default function BacktestSection() {
 
     fetchSymbolCatalog();
   }, []);
-
-  const filteredSymbolCatalog = useMemo(() => {
-    const query = symbolQuery.trim().toUpperCase();
-    if (!query) {
-      return symbolCatalog;
-    }
-    return symbolCatalog.filter((item) => {
-      if (!item?.symbol) return false;
-      const inSymbol = item.symbol.includes(query);
-      const inName = (item.name || "").toUpperCase().includes(query);
-      return inSymbol || inName;
-    });
-  }, [symbolCatalog, symbolQuery]);
 
   const hoveredSymbolMeta = useMemo(() => {
     if (!hoveredSymbol) {
@@ -760,44 +749,64 @@ export default function BacktestSection() {
         <p className="text-xs text-slate-400 mt-1">
           빠른 입력은 예시용입니다. 원하면 직접 입력창에 임의 티커를 넣어도 됩니다.
         </p>
+        {/* S&P 500 섹터별 종목 빠른 선택 */}
         <div>
-          <label className="block text-xs text-slate-400 mb-2 uppercase">종목 빠른 선택 (백엔드 목록 연동)</label>
-          <input
-            type="text"
-            value={symbolQuery}
-            onChange={(e) => setSymbolQuery(e.target.value.toUpperCase())}
-            placeholder="예: AAPL, MSFT, SPY"
-            className="w-full bg-slate-800 text-white rounded-xl px-4 py-3 border border-slate-700 mb-2"
-          />
-          <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto pr-1 pb-1">
-            {filteredSymbolCatalog.slice(0, 120).map((item) => (
-              <div key={item.symbol} className="inline-flex items-center gap-1">
+          <label className="block text-xs text-slate-400 mb-2 uppercase">섹터별 종목 빠른 선택 (S&amp;P 500)</label>
+
+          {/* 섹터 탭 */}
+          <div className="flex gap-1.5 overflow-x-auto pb-2 mb-3 custom-scrollbar">
+            {SP500_SECTORS.map((sector) => (
+              <button
+                key={sector.id}
+                type="button"
+                onClick={() => { setActiveSector(sector.id); setSelectedTickerInfo(null); }}
+                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap border transition-colors shrink-0 ${
+                  activeSector === sector.id
+                    ? "bg-blue-600 border-blue-500 text-white"
+                    : "bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-500"
+                }`}
+              >
+                {sector.name}
+              </button>
+            ))}
+          </div>
+
+          {/* 선택된 섹터의 종목 그리드 */}
+          {SP500_SECTORS.filter((s) => s.id === activeSector).map((sector) => (
+            <div key={sector.id} className="flex flex-wrap gap-2 mb-3">
+              {sector.tickers.map((t) => (
                 <button
+                  key={t.symbol}
                   type="button"
-                  onMouseEnter={() => setHoveredSymbol(item.symbol)}
-                  onMouseLeave={() => setHoveredSymbol("")}
                   onClick={() => {
+                    setSelectedTickerInfo(t);
                     if (form.mode === "basket") {
-                      fillBasketSymbol(item.symbol);
+                      fillBasketSymbol(t.symbol);
                       return;
                     }
-                    setSymbol(item.symbol);
+                    setSymbol(t.symbol);
                   }}
-                  className="text-xs rounded-full border border-slate-700 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200"
-                  title={`${item.symbol} · ${item.name || "종목 정보를 불러오지 못했습니다"}`}
+                  className={`flex flex-col items-start px-3 py-1.5 rounded-lg border text-xs transition-colors ${
+                    selectedTickerInfo?.symbol === t.symbol
+                      ? "bg-blue-600/20 border-blue-500 text-blue-300"
+                      : "bg-slate-900 border-slate-700 text-slate-200 hover:border-slate-500"
+                  }`}
                 >
-                  {item.symbol}
+                  <span className="font-bold">{t.symbol}</span>
+                  <span className="text-slate-400 text-[10px]">{t.name}</span>
                 </button>
-                {symbolInfoButton(item.symbol)}
-              </div>
-            ))}
-            {filteredSymbolCatalog.length === 0 && (
-              <p className="text-slate-500 text-sm">검색한 종목이 없습니다.</p>
-            )}
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            총 {filteredSymbolCatalog.length}개 종목 (최대 120개만 화면 표시)
-          </p>
+              ))}
+            </div>
+          ))}
+
+          {/* 선택 종목 설명 카드 */}
+          {selectedTickerInfo && (
+            <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-4 py-3 text-sm">
+              <span className="font-bold text-white">{selectedTickerInfo.symbol}</span>
+              <span className="text-slate-400 ml-2 text-xs">{selectedTickerInfo.name}</span>
+              <p className="mt-1 text-slate-300 leading-relaxed text-xs">{selectedTickerInfo.desc}</p>
+            </div>
+          )}
         </div>
 
         {symbolInfoMeta && (
