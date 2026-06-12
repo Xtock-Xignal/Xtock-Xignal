@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import api from "../utils/api";
 import { useValuationPrices } from "../hooks/useValuationPrices";
+import { useBackgroundPrices } from "../hooks/useBackgroundPrices";
 import { computeSimulationMetrics } from "../utils/simulationPortfolio";
 
 const formatMoney = (n) => {
@@ -65,14 +66,29 @@ export default function PortfolioSection({ user = null, isActive = true }) {
     return () => window.clearTimeout(timeoutId);
   }, [loadSimulationState, isActive]);
 
-  const { holdingList, getValuationPrice } = useValuationPrices(
-    holdings,
-    Boolean(email && simulationStarted && isActive)
+  const enabled = Boolean(email && simulationStarted && isActive);
+
+  const { holdingList, getValuationPrice } = useValuationPrices(holdings, enabled);
+
+  const holdingSymbolsStr = useMemo(
+    () => holdingList.map(([sym]) => sym).sort().join(","),
+    [holdingList]
+  );
+
+  const backgroundPrices = useBackgroundPrices(holdingSymbolsStr, enabled);
+
+  const getEnhancedPrice = useCallback(
+    (symbol) => {
+      const bgPrice = backgroundPrices[symbol];
+      if (bgPrice > 0) return bgPrice;
+      return getValuationPrice(symbol);
+    },
+    [backgroundPrices, getValuationPrice]
   );
 
   const { totalValue, totalPnl } = useMemo(
-    () => computeSimulationMetrics(cash, holdings, getValuationPrice),
-    [cash, holdings, getValuationPrice]
+    () => computeSimulationMetrics(cash, holdings, getEnhancedPrice),
+    [cash, holdings, getEnhancedPrice]
   );
 
   if (!email) {
@@ -134,7 +150,7 @@ export default function PortfolioSection({ user = null, isActive = true }) {
                   style={{ maxHeight: 320 }}
                 >
                   {holdingList.map(([sym, h]) => {
-                    const px = getValuationPrice(sym);
+                    const px = getEnhancedPrice(sym);
                     const shares = Number(h.shares) || 0;
                     const avg = Number(h.avgCost) || 0;
                     const pnl = (px - avg) * shares;

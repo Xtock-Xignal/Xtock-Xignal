@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../utils/api";
 import { useValuationPrices } from "../hooks/useValuationPrices";
+import { useBackgroundPrices } from "../hooks/useBackgroundPrices";
 import { calculateOrderAmounts, computeSimulationMetrics } from "../utils/simulationPortfolio";
 import {
   ComposedChart,
@@ -711,29 +712,21 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
     simulationStarted
   );
 
-  // 실시간 모드로 열려 있는 종목은 WebSocket 최신 틱 가격을 우선 사용해 손익을 실시간 반영
-  const realtimePriceBySymbol = useMemo(() => {
-    const result = {};
-    for (const [sym, rows] of Object.entries(priceSeriesBySymbol)) {
-      if (chartSourceBySymbol[sym] !== "realtime") continue;
-      for (let i = rows.length - 1; i >= 0; i--) {
-        const close = Number(rows[i]?.close);
-        if (Number.isFinite(close) && close > 0) {
-          result[sym] = close;
-          break;
-        }
-      }
-    }
-    return result;
-  }, [priceSeriesBySymbol, chartSourceBySymbol]);
+  const holdingSymbolsStr = useMemo(
+    () => holdingList.map(([sym]) => sym).sort().join(","),
+    [holdingList]
+  );
+
+  // 보유 종목 전체를 백그라운드 WebSocket으로 구독해 실시간 가격 수신
+  const backgroundPrices = useBackgroundPrices(holdingSymbolsStr, simulationStarted);
 
   const getEnhancedValuationPrice = useCallback(
     (symbol) => {
-      const rtPrice = realtimePriceBySymbol[symbol];
-      if (rtPrice > 0) return rtPrice;
+      const bgPrice = backgroundPrices[symbol];
+      if (bgPrice > 0) return bgPrice;
       return getValuationPrice(symbol);
     },
-    [realtimePriceBySymbol, getValuationPrice]
+    [backgroundPrices, getValuationPrice]
   );
 
   const {
