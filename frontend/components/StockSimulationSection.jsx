@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../utils/api";
 import { useValuationPrices } from "../hooks/useValuationPrices";
 import { useBackgroundPrices } from "../hooks/useBackgroundPrices";
+import { SP500_SECTORS } from "../data/sp500Sectors";
 import { calculateOrderAmounts, computeSimulationMetrics } from "../utils/simulationPortfolio";
 import {
   ComposedChart,
@@ -447,16 +448,8 @@ function ChartOhlcTooltip({ active, payload, label, isRealtime, sessionHigh, ses
 
 const INITIAL_CASH_DEFAULT = 5000; // 5000 달러(가상)
 export default function StockSimulationSection({ rewardCash = 0, user = null }) {
-  const quickTickers = useMemo(
-    () => [
-      { symbol: "TSLA", name: "Tesla" },
-      { symbol: "NVDA", name: "NVIDIA" },
-      { symbol: "AAPL", name: "Apple" },
-      { symbol: "MSFT", name: "Microsoft" },
-      { symbol: "AMZN", name: "Amazon" },
-    ],
-    []
-  );
+  const [activeSector, setActiveSector] = useState(SP500_SECTORS[0].id);
+  const [selectedTickerInfo, setSelectedTickerInfo] = useState(null);
 
   const [simulationStarted, setSimulationStarted] = useState(false);
   const [initialCashInput, setInitialCashInput] = useState(
@@ -1330,19 +1323,57 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
               </button>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {quickTickers.map((t) => (
-                <button
-                  key={t.symbol}
-                  onClick={() => {
-                    setSymbolInput(t.symbol);
-                    fetchSymbolSeries(t.symbol);
-                  }}
-                  className="px-3 py-1 rounded-full bg-slate-900 border border-slate-700 text-slate-200 hover:border-blue-500 hover:text-blue-300 transition-colors text-xs"
-                >
-                  {t.symbol}
-                </button>
+            {/* S&P 500 섹터 종목 피커 */}
+            <div>
+              {/* 섹터 탭 */}
+              <div className="flex gap-1.5 overflow-x-auto pb-2 mb-3 custom-scrollbar">
+                {SP500_SECTORS.map((sector) => (
+                  <button
+                    key={sector.id}
+                    onClick={() => { setActiveSector(sector.id); setSelectedTickerInfo(null); }}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap border transition-colors shrink-0 ${
+                      activeSector === sector.id
+                        ? "bg-blue-600 border-blue-500 text-white"
+                        : "bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-500"
+                    }`}
+                  >
+                    {sector.name}
+                  </button>
+                ))}
+              </div>
+
+              {/* 선택된 섹터의 종목 그리드 */}
+              {SP500_SECTORS.filter((s) => s.id === activeSector).map((sector) => (
+                <div key={sector.id} className="flex flex-wrap gap-2 mb-3">
+                  {sector.tickers.map((t) => (
+                    <button
+                      key={t.symbol}
+                      onClick={() => {
+                        setSymbolInput(t.symbol);
+                        setSelectedTickerInfo(t);
+                        fetchSymbolSeries(t.symbol);
+                      }}
+                      className={`flex flex-col items-start px-3 py-1.5 rounded-lg border text-xs transition-colors ${
+                        selectedTickerInfo?.symbol === t.symbol
+                          ? "bg-blue-600/20 border-blue-500 text-blue-300"
+                          : "bg-slate-900 border-slate-700 text-slate-200 hover:border-slate-500"
+                      }`}
+                    >
+                      <span className="font-bold">{t.symbol}</span>
+                      <span className="text-slate-400 text-[10px]">{t.name}</span>
+                    </button>
+                  ))}
+                </div>
               ))}
+
+              {/* 선택 종목 설명 카드 */}
+              {selectedTickerInfo && (
+                <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-4 py-3 text-sm mb-1">
+                  <span className="font-bold text-white">{selectedTickerInfo.symbol}</span>
+                  <span className="text-slate-400 ml-2 text-xs">{selectedTickerInfo.name}</span>
+                  <p className="mt-1 text-slate-300 leading-relaxed text-xs">{selectedTickerInfo.desc}</p>
+                </div>
+              )}
             </div>
           </div>
 
