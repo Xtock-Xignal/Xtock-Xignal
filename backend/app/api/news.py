@@ -4,14 +4,20 @@ import json
 import requests
 import feedparser
 import datetime
+from typing import Optional
 from email.utils import parsedate_to_datetime
 from fastapi import APIRouter, Query
 from pymongo import MongoClient
 from google import genai
 import os
 from newspaper import Article, Config
-from googletrans import Translator
 from pydantic import BaseModel
+from app.services.industry_classifier_service import classify_article
+
+try:
+    from deep_translator import GoogleTranslator
+except Exception:
+    GoogleTranslator = None
 
 router = APIRouter()
 
@@ -73,6 +79,23 @@ SP500_KEYWORDS = [
     "tesla", "tsla", "amazon", "amzn", "s&p 500", "spx", "spy"
 ]
 
+DEFAULT_NEWS_SYMBOLS = [
+    "SPY", "QQQ", "DIA", "AAPL", "MSFT", "NVDA", "TSLA", "AMZN",
+    "GOOGL", "META", "JPM", "BAC", "XOM", "JNJ", "LLY", "AVGO",
+]
+
+
+def parse_symbol_list(symbols: Optional[str] = None) -> list:
+    raw_symbols = symbols or ",".join(DEFAULT_NEWS_SYMBOLS)
+    parsed = []
+    for item in raw_symbols.split(","):
+        symbol = item.strip().upper()
+        if not symbol or not symbol.replace(".", "").isalnum():
+            continue
+        if symbol not in parsed:
+            parsed.append(symbol)
+    return parsed[:30] or DEFAULT_NEWS_SYMBOLS
+
 def is_sp500_related(title: str, text: str) -> bool:
     """제목이나 본문에 S&P 500 관련 키워드가 있는지 검사합니다."""
     combined_text = (title + " " + text).lower()
@@ -97,6 +120,16 @@ def get_related_tickers(title: str, text: str) -> list:
         if key in combined_text:
             found_tickers.add(ticker)
     return list(found_tickers)
+
+def attach_industry_classification(news: dict) -> dict:
+    """뉴스 문서에 산업 분류 결과를 붙인다. 기존 값이 있으면 그대로 유지한다."""
+    if not isinstance(news, dict):
+        return news
+    if news.get("industry_classification"):
+        return news
+    enriched = dict(news)
+    enriched["industry_classification"] = classify_article(enriched)
+    return enriched
 
 
 def extract_article_text(url: str) -> str:
@@ -196,7 +229,7 @@ async def search_term(keyword: str):
         """
 
         # 2. 최신 SDK로 API 호출
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=prompt
@@ -234,6 +267,60 @@ class SummaryRequest(BaseModel):
     text: str
     url: str = None 
 
+class ContextQuestionRequest(BaseModel):
+    selected_text: str
+    article_text: Optional[str] = ""
+    article_title: Optional[str] = ""
+    question: Optional[str] = None
+
+@router.post("/context-question")
+async def ask_context_question(req: ContextQuestionRequest):
+    selected = (req.selected_text or "").strip()
+    if len(selected) < 2:
+        return {"answer": "질문할 단어나 문장을 먼저 선택해주세요."}
+
+    article_text = (req.article_text or "")[:2500]
+    question = (req.question or "").strip() or "선택한 부분이 기사 문맥에서 무슨 의미인지 초보자도 이해하기 쉽게 설명해줘."
+
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        return {
+            "answer": (
+                f"선택한 표현: {selected}\n"
+                "AI API 키가 설정되어 있지 않아 실시간 답변을 만들 수 없습니다. "
+                "GEMINI_API_KEY 또는 GOOGLE_API_KEY를 설정하면 기사 문맥을 바탕으로 설명합니다."
+            )
+        }
+
+    try:
+        client = genai.Client(api_key=api_key)
+        prompt = f"""
+        너는 초보 투자자를 돕는 금융 기사 해설자다.
+        사용자가 기사에서 선택한 단어나 문장을 기사 문맥 안에서 설명한다.
+        답변은 한국어로, 3~5문장 이내로, 투자 조언이 아니라 의미 설명 중심으로 작성한다.
+        기사에 없는 내용은 추측하지 말고 "기사만으로는 확정하기 어렵다"고 말한다.
+
+        기사 제목:
+        {req.article_title or ""}
+
+        선택한 내용:
+        {selected}
+
+        사용자 질문:
+        {question}
+
+        기사 본문 일부:
+        {article_text}
+        """
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
+        return {"answer": response.text.strip()}
+    except Exception as e:
+        print(f"[Error] Context question failed: {e}")
+        return {"answer": "AI 답변을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.", "error": str(e)}
+
 @router.post("/summary")
 async def get_ai_summary(req: SummaryRequest):
     """원문을 받아 Gemini API를 통해 3줄 요약을 생성합니다."""
@@ -250,8 +337,8 @@ async def get_ai_summary(req: SummaryRequest):
             return {"summary": existing_news["summary"]}
         
     try:
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
+
         # 503 에러 방지 (1500자 내외)
         if len(req.text) <= 1500:
             safe_text = req.text
@@ -313,7 +400,8 @@ async def get_ai_summary(req: SummaryRequest):
 @router.get("/live")
 async def get_live_news(
     force_refresh: bool = Query(False, description="강제 크롤링 여부"),
-    latest_url: str = Query(None, description="현재 화면의 최신 기사 URL") 
+    latest_url: str = Query(None, description="현재 화면의 최신 기사 URL"),
+    symbols: Optional[str] = Query(None, description="Yahoo/Finnhub 조회용 쉼표 구분 티커 목록"),
 ):
     init_test_news()
     
@@ -328,10 +416,12 @@ async def get_live_news(
             all_news.extend(list(general_cursor))
             
         all_news.sort(key=lambda x: x.get("timestamp", 0), reverse=True)
-        return all_news[:limit]
+        return [attach_industry_classification(news) for news in all_news[:limit]]
 
     # 새로고침 요청 시, RSS 목록만 빠르게 가져와서 최신 기사가 동일한지 확인 
-    rss_url = "https://feeds.finance.yahoo.com/rss/2.0/headline?s=SPY,QQQ,AAPL,NVDA,TSLA&region=US&lang=en-US"
+    requested_symbols = parse_symbol_list(symbols)
+    rss_symbols = ",".join(requested_symbols)
+    rss_url = f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={rss_symbols}&region=US&lang=en-US"
     if latest_url and not force_refresh:
         try:
             quick_feed = feedparser.parse(rss_url)
@@ -351,7 +441,7 @@ async def get_live_news(
     print("[System] Scanning for new articles...")
     
     YAHOO_MAX = 2
-    FINNHUB_MAX = 2
+    FINNHUB_MAX = 6
     yahoo_added = 0
     finnhub_added = 0
 
@@ -411,6 +501,7 @@ async def get_live_news(
                 "related_tags": related_tickers
                 
             }
+            doc["industry_classification"] = classify_article(doc)
             col_to_insert.insert_one(doc)
             yahoo_added += 1
             print(f"[Info] Yahoo article saved to {'SP500' if is_vip else 'General'}: {doc['title']}")
@@ -422,11 +513,36 @@ async def get_live_news(
     finnhub_api_key = os.getenv("FINNHUB_API_KEY")
     if finnhub_api_key:
         try:
+            finnhub_data = []
             finnhub_url = f"https://finnhub.io/api/v1/news?category=general&token={finnhub_api_key}"
             res = requests.get(finnhub_url, timeout=10)
             if res.status_code == 200:
-                finnhub_data = res.json()
-                for item in finnhub_data:
+                finnhub_data.extend(res.json())
+
+            today = datetime.datetime.utcnow().date()
+            week_ago = today - datetime.timedelta(days=7)
+            for symbol in requested_symbols[:8]:
+                company_url = (
+                    "https://finnhub.io/api/v1/company-news"
+                    f"?symbol={symbol}&from={week_ago.isoformat()}&to={today.isoformat()}&token={finnhub_api_key}"
+                )
+                company_res = requests.get(company_url, timeout=10)
+                if company_res.status_code == 200:
+                    for company_item in company_res.json()[:3]:
+                        company_item.setdefault("related_symbol", symbol)
+                        finnhub_data.append(company_item)
+
+            seen_links = set()
+            deduped_data = []
+            for item in finnhub_data:
+                link = item.get("url", "")
+                if not link or link in seen_links:
+                    continue
+                seen_links.add(link)
+                deduped_data.append(item)
+
+            if deduped_data:
+                for item in sorted(deduped_data, key=lambda x: x.get("datetime", 0), reverse=True):
                     if finnhub_added >= FINNHUB_MAX: break
                     
                     link = item.get("url", "")
@@ -461,6 +577,9 @@ async def get_live_news(
                     iso_date = datetime.datetime.fromtimestamp(timestamp).isoformat()
                     
                     related_tickers = get_related_tickers(title, original_text)
+                    related_symbol = item.get("related_symbol")
+                    if related_symbol and related_symbol not in related_tickers:
+                        related_tickers.append(related_symbol)
                     is_vip = len(related_tickers) > 0
 
                     if is_vip:
@@ -480,6 +599,7 @@ async def get_live_news(
                         "is_vip": is_vip,
                         "related_tags": related_tickers
                     }
+                    doc["industry_classification"] = classify_article(doc)
                     col_to_insert.insert_one(doc)
                     finnhub_added += 1
                     print(f"[Info] Finnhub article saved to {'SP500' if is_vip else 'General'}: {doc['title']}")
@@ -493,7 +613,7 @@ async def get_live_news(
 
 class TranslateRequest(BaseModel):
     text: str
-    url: str
+    url: Optional[str] = None
 
 @router.post("/translate")
 async def translate_news(req: TranslateRequest):
@@ -513,7 +633,10 @@ async def translate_news(req: TranslateRequest):
     
     # 번역 내용이 DB에 없는 경우 번역 수행
     try:
-        translator = Translator()
+        if GoogleTranslator is None:
+            return {"translated_text": "현재 번역 모듈을 사용할 수 없습니다. 원문을 함께 확인해주세요."}
+
+        translator = GoogleTranslator(source="en", target="ko")
         
         # 4000자로 자르는 대신, 문단 단위로 쪼개서 번역 후 이어붙임
         paragraphs = req.text.split('\n')
@@ -530,8 +653,7 @@ async def translate_news(req: TranslateRequest):
             para_chunks = [para[i:i+chunk_size] for i in range(0, len(para), chunk_size)]
             
             for chunk in para_chunks:
-                result = translator.translate(chunk, src='en', dest='ko')
-                translated_paragraphs.append(result.text)
+                translated_paragraphs.append(translator.translate(chunk))
 
         # 흩어진 한글 조각들을 다시 줄바꿈(\n)을 넣어 하나의 온전한 글로 조립
         final_translated_text = '\n'.join(translated_paragraphs)

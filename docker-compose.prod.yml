@@ -1,0 +1,46 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: xtock-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+      - backend/.env
+    depends_on:
+      - mongo-db
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: xtock-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: always
+
+  data-pipeline:
+    build:
+      context: ./data_pipeline
+      dockerfile: Dockerfile
+    container_name: xtock-pipeline
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  mongo-db:
+    image: mongo:latest
+    container_name: xtock-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: always
+
+volumes:
+  mongo_data:

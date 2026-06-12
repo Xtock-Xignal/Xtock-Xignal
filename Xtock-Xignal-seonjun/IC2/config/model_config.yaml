@@ -1,0 +1,55 @@
+# IC2 (BAAI/bge-m3) Fine-tuning 하이퍼파라미터
+# GICS sector → industry_group 계층형 분류 학습
+
+training:
+  # HuggingFace 모델 ID
+  model_name: "BAAI/bge-m3"
+
+  # 학습 에폭 수
+  num_epochs: 5 #3
+
+  # 배치 크기 (GPU 메모리에 따라 조정)
+  batch_size: 16 #4
+
+  # 학습률 (bge-m3 567M, IPTC보다 낮게)
+  learning_rate: 0.00002  # 2e-5
+
+  # 토크나이저 최대 시퀀스 길이
+  max_length: 512
+
+  # 학습/테스트 분할 비율
+  test_ratio: 0.2
+
+  # 랜덤 시드
+  seed: 42
+
+  # IndustryCorpus2_Classifier backbone으로 초기화
+  # true: BAAI/IndustryCorpus2_Classifier → backbone만 추출
+  # false: BAAI/bge-m3 (base)
+  load_from_ic2: true
+
+optimizer:
+  # AdamW weight decay
+  weight_decay: 0.01
+
+  # Adam epsilon
+  adam_epsilon: 0.00000001  # 1e-8
+
+  # Gradient clipping 최대 노름
+  max_grad_norm: 1.0
+
+loss:
+  # 계층형 분류 가중합 비율
+  sector_loss_weight: 0.3
+  ig_loss_weight: 0.7
+
+  # IG 클래스 가중치 클리핑
+  class_weight_clipping: 5.0
+
+evaluation:
+  # confidence threshold 후보 목록
+  thresholds: [0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+
+logging:
+  # 로그 출력 간격 (steps)
+  log_interval: 10

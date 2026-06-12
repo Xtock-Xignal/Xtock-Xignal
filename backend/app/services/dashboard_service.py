@@ -2,8 +2,17 @@ from __future__ import annotations
 
 
 def get_dashboard_summary(yf_module):
+    INDEX_TARGETS = [
+        ("^GSPC", "S&P 500"),
+        ("^IXIC", "NASDAQ"),
+        ("^DJI", "다우존스"),
+        ("^VIX", "VIX 공포지수"),
+        ("^TNX", "10년 국채금리"),
+        ("DX-Y.NYB", "달러 인덱스"),
+    ]
+
     indices_data = []
-    for symbol, name in [("^GSPC", "S&P 500"), ("^VIX", "VIX (공포지수)")]:
+    for symbol, name in INDEX_TARGETS:
         try:
             ticker = yf_module.Ticker(symbol)
             price = ticker.fast_info.last_price
@@ -14,9 +23,9 @@ def get_dashboard_summary(yf_module):
                 {
                     "name": name,
                     "symbol": symbol,
-                    "price": price,
-                    "change": change,
-                    "changePercent": change_percent,
+                    "price": round(price, 2),
+                    "change": round(change, 2),
+                    "changePercent": round(change_percent, 2),
                 }
             )
         except Exception:

@@ -4,14 +4,13 @@ api_keys.py
 secrets.py
 
 # 2. 대용량 데이터 & 생성된 DB (깃허브 용량 문제로 안올라가는 부분)
-chroma_db/
 *.csv
 *.json
+!frontend/package.json
+!frontend/package-lock.json
+!frontend/jsconfig.json
+!backend/best_params.json
 data_pipeline/*.jsonl
-backend/chromaDB/
-archive/benchmark/chroma_db
-archive/benchmark/chroma_db_bge
-archive/benchmark/chroma_db_mini
 
 # 3. 파이썬/노드 찌꺼기
 __pycache__/
@@ -25,3 +24,6 @@ build/
 venv/
 env/
 .venv/
+
+# 5. Claude 작업 문서 (로컬 전용)
+.claude/

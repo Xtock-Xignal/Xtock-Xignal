@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import api from "../utils/api"; 
+import api from "../utils/api"; // [필수] axios 인스턴스 import
 import { User, Lock, Mail, ArrowRight } from 'lucide-react';
 
 export default function LoginPage({ onLogin }) {
@@ -24,7 +24,7 @@ export default function LoginPage({ onLogin }) {
 
     try {
       if (view === 'signup') {
-        // [회원가입 로직]
+        // [회원가입 요청]
         const res = await api.post("/api/register", {
           username: formData.username,
           email: formData.email,
@@ -34,46 +34,32 @@ export default function LoginPage({ onLogin }) {
         if (res.data.success) {
           alert("가입을 환영합니다! 로그인해주세요.");
           setView('login');
-          setFormData({ ...formData, password: "" });
+          setFormData({ ...formData, password: "" }); // 비번 초기화
         } else {
           alert(res.data.msg || "회원가입 실패");
         }
 
       } else if (view === 'login') {
-        // [로그인 로직]
+        // [로그인 요청]
         const res = await api.post("/api/login", {
           email: formData.email,
           password: formData.password
         });
 
         if (res.data.success) {
+          // 성공 시 부모(page.js)에게 유저 정보 전달
           onLogin(res.data.user);
         } else {
           alert(res.data.msg || "로그인 실패");
         }
-
       } else if (view === 'forgot') {
-        // [수정 포인트] 비밀번호 찾기 (임시 비번 발급)
-        console.log("비밀번호 찾기 요청:", formData.email); // 디버깅용 로그
-
-        const res = await api.post("/api/forgot-password", {
-          email: formData.email
-        });
-
-        if (res.data.success) {
-          // [핵심] 서버가 준 임시 비밀번호를 화면에 보여줌
-          alert(`[임시 비밀번호 발급 완료]\n\n비밀번호: ${res.data.temp_password}\n\n위 비밀번호를 복사해서 로그인하세요.`);
-          
-          setView('login');
-          // 로그인하기 편하게 비번 칸에 미리 넣어줌
-          setFormData({ ...formData, password: res.data.temp_password });
-        } else {
-          alert(res.data.msg || "존재하지 않는 이메일입니다.");
-        }
+        // 비밀번호 찾기는 아직 DB 연동 없이 시뮬레이션 (메일 서버 필요하므로)
+        alert(`[${formData.email}]로 재설정 링크를 보냈습니다.`);
+        setView('login');
       }
     } catch (error) {
       console.error(error);
-      alert("서버 연결에 실패했습니다. (백엔드 로그를 확인하세요)");
+      alert("서버 연결에 실패했습니다.");
     }
 
     setIsLoading(false);
@@ -161,7 +147,7 @@ export default function LoginPage({ onLogin }) {
               disabled={isLoading}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-900/20 disabled:opacity-50"
             >
-              {isLoading ? "처리 중..." : (view === 'login' ? "로그인" : view === 'signup' ? "회원가입" : "임시 비밀번호 발급")}
+              {isLoading ? "처리 중..." : (view === 'login' ? "로그인" : view === 'signup' ? "회원가입" : "전송")}
             </button>
           </form>
 
@@ -172,7 +158,6 @@ export default function LoginPage({ onLogin }) {
                 <p className="text-slate-500 text-sm">
                   계정이 없으신가요? <button onClick={() => setView('signup')} className="text-blue-400 hover:underline">회원가입</button>
                 </p>
-                <button onClick={() => setView('forgot')} className="text-slate-600 text-xs hover:text-white">비밀번호 찾기</button>
               </>
             )}
             {view === 'signup' && (

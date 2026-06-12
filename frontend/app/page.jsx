@@ -1,256 +1,205 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  Search as SearchIcon,
-  Settings,
-  LayoutDashboard,
-  User,
-  Menu,
-  X,
-  BookOpen,
-  Activity,
-  History,
   BarChart3,
+  BookOpen,
+  Coins,
+  LayoutDashboard,
   LogOut,
-  Newspaper
+  Menu,
+  Newspaper,
+  Settings,
+  User,
+  X,
 } from "lucide-react";
 
-import { useSearchParams } from "next/navigation";
-
-import LoginPage from "@/features/auth/LoginPage";
-import DashboardSection from "@/features/dashboard/DashboardSection";
-import LearningCenter from "@/features/learn/LearningCenter";
-import BacktestSection from "@/features/backtest/BacktestSection";
-import PortfolioSection from "@/features/portfolio/PortfolioSection";
-import SettingsSection from "@/features/settings/SettingsSection";
+import BacktestSection from "@/components/BacktestSection";
+import DashboardSection from "@/components/DashboardSection";
+import LearningCenter from "@/components/LearningCenter";
+import LoginPage from "@/components/LoginPage";
+import PortfolioSection from "@/components/PortfolioSection";
+import SettingsSection from "@/components/SettingsSection";
+import StockSimulationSection from "@/components/StockSimulationSection";
 import NewsSimulatorSection from "@/features/simulator/NewsSimulatorSection";
-
-// API 유틸리티 import
 import api from "../utils/api";
 
-const AUTH_STORAGE_KEY = "xtock-auth-user-v1";
-const AUTH_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30일
+const MENU_ITEMS = [
+  { id: "dashboard", icon: LayoutDashboard, label: "시장 현황" },
+  { id: "learn", icon: BookOpen, label: "학습 센터" },
+  { id: "simulator", icon: Newspaper, label: "뉴스 시뮬레이터" },
+  { id: "simulation", icon: Coins, label: "주식 시뮬레이션" },
+  { id: "portfolio", icon: User, label: "포트폴리오" },
+  { id: "backtest", icon: BarChart3, label: "백테스팅" },
+  { id: "settings", icon: Settings, label: "설정" },
+];
 
-const isAuthValid = (raw) => {
-  try {
-    const parsed = JSON.parse(raw);
+const MENU_TITLES = {
+  dashboard: "시장 현황",
+  learn: "학습 센터",
+  simulator: "뉴스 시뮬레이터",
+  simulation: "주식 시뮬레이션",
+  portfolio: "포트폴리오",
+  backtest: "백테스팅",
+  settings: "설정",
+};
 
-    // legacy: old schema was directly user object
-    if (parsed && parsed.email && parsed.username) {
-      return {
-        user: parsed,
-        expiresAt: Date.now() + AUTH_TTL_MS,
-      };
-    }
-
-    if (!parsed || typeof parsed !== "object") {
-      return null;
-    }
-
-    const expiresAt = Number(parsed.expiresAt);
-    const nestedUser = parsed.user;
-    if (!nestedUser || !nestedUser.email || !nestedUser.username || !Number.isFinite(expiresAt)) {
-      return null;
-    }
-
-    if (Date.now() > expiresAt) {
-      return null;
-    }
-
-    return {
-      user: nestedUser,
-      expiresAt,
-    };
-  } catch {
-    return null;
-  }
+const MENU_DESCRIPTIONS = {
+  dashboard: "오늘의 시장 흐름과 주요 뉴스를 한눈에 확인합니다.",
+  learn: "주식 기초 개념을 학습하고 퀴즈 보상으로 시뮬레이션 자금을 늘립니다.",
+  simulator: "최신 금융 뉴스를 읽고, 번역·요약·용어 설명으로 문맥을 이해합니다.",
+  simulation: "가상 현금으로 매수·매도 흐름을 연습합니다.",
+  portfolio: "시뮬레이션 보유 종목과 최근 거래 내역을 확인합니다.",
+  backtest: "과거에 특정 주식을 샀다면 지금 얼마가 되었을지 시뮬레이션합니다.",
+  settings: "프로필, 거래 PIN, 시뮬레이션 계좌 상태를 관리합니다.",
 };
 
 export default function Home() {
-
-  const searchParams = useSearchParams();
-
-  // [수정] 로그인 상태 관리 (기본값 null)
-  const [user, setUser] = useState(null); 
-  const [isAuthChecking, setIsAuthChecking] = useState(true);
-  
+  const [user, setUser] = useState(null);
   const [activeMenu, setActiveMenu] = useState("dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [todayDate, setTodayDate] = useState("");
 
-  // [추가] 검색 관련 상태 (handleSearch에서 사용됨)
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState(null);
+  const [quizRewardCash, setQuizRewardCash] = useState(0);
+  const [attendanceRewardCash, setAttendanceRewardCash] = useState(0);
+  const [rewardHydrated, setRewardHydrated] = useState(false);
+  const totalRewardCash = quizRewardCash + attendanceRewardCash;
 
-  useEffect(() => {
-    const tabFromUrl = searchParams.get("tab");
-    if (tabFromUrl) {
-      // url에 ?tab=dashboard 등이 들어오면 해당 화면으로 즉시 전환
-      setActiveMenu(tabFromUrl); 
-    }
-  }, [searchParams]);
-
-  useEffect(() => {
-    setTodayDate(new Date().toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      weekday: "long",
-    }));
+  const applyRewardState = useCallback((rewards = {}) => {
+    setQuizRewardCash(Number(rewards.quiz_reward_cash) || 0);
+    setAttendanceRewardCash(Number(rewards.attendance_reward_cash) || 0);
   }, []);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (!raw) {
-        setIsAuthChecking(false);
-        return;
-      }
-
-      const restored = isAuthValid(raw);
-      if (!restored) {
-        localStorage.removeItem(AUTH_STORAGE_KEY);
-        setIsAuthChecking(false);
-        return;
-      }
-
-      setUser(restored.user);
-      localStorage.setItem(
-        AUTH_STORAGE_KEY,
-        JSON.stringify({
-          user: restored.user,
-          savedAt: Date.now(),
-          expiresAt: Date.now() + AUTH_TTL_MS,
-        })
-      );
-      setIsAuthChecking(false);
-    } catch {
-      // 손상된 저장값은 무시하고 로그인 화면으로 이동
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      setIsAuthChecking(false);
+  const handleQuizCorrect = async () => {
+    const email = user?.email?.trim();
+    if (!email) {
+      setQuizRewardCash((prev) => prev + 50);
+      return;
     }
-  }, []);
 
-  if (isAuthChecking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100">
-        <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900 px-6 py-4 text-sm text-slate-300">
-          <span className="inline-block h-5 w-5 rounded-full border-2 border-blue-400/60 border-t-transparent animate-spin" />
-          인증을 확인하고 있어요...
-        </div>
-      </div>
-    );
-  }
-
-  // [추가] 로그인이 안 되어 있으면 로그인 페이지를 먼저 보여줌
-  if (!user) {
-    return (
-      <LoginPage
-        onLogin={(userData) => {
-          const authPayload = {
-            user: userData,
-            savedAt: Date.now(),
-            expiresAt: Date.now() + AUTH_TTL_MS,
-          };
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authPayload));
-          setUser(userData);
-        }}
-      />
-    );
-  }
-
-  const handleSearch = async (query) => {
-    setSearchQuery(query);
-    setIsLoading(true);
-    setAnalysisResult(null);
-    
     try {
-      console.log(`Searching for: ${query}`);
-      
-      const res = await api.post("/api/match-company", { text: query });
-      
-      if (!res.data.matches || res.data.matches.length === 0) {
-        alert("관련된 과거 분석 사례를 찾을 수 없습니다.");
-        setIsLoading(false);
-        return;
+      const res = await api.post("/api/user/rewards/quiz", { email, amount: 50 });
+      if (res?.data?.success) {
+        applyRewardState(res.data.rewards);
+      } else {
+        setQuizRewardCash((prev) => prev + 50);
       }
-
-      const data = res.data.matches[0]; 
-      console.log("Received Data:", data);
-
-      setAnalysisResult({
-        tweet: data.tweet,
-        stockData: data.stockData,
-        postIndex: data.postIndex,
-        companyInfo: {
-            name: data.name,
-            financial_summary: data.financial_summary
-        }
-      });
-
     } catch (error) {
-      console.error("Connection Error:", error);
-      alert("서버 연결 실패. 백엔드 확인");
-    } finally {
-      setIsLoading(false);
+      console.error("Failed to save quiz reward", error);
+      setQuizRewardCash((prev) => prev + 50);
     }
   };
 
-  const menuItems = [
-    { id: "dashboard", icon: LayoutDashboard, label: "대시보드" },
-    { id: "simulator", icon: Newspaper, label: "뉴스 시뮬레이터" },
-    { id: "learn", icon: BookOpen, label: "학습 센터" },
-    { id: "backtest", icon: BarChart3, label: "백테스팅" },
-    { id: "portfolio", icon: User, label: "모의 투자(포트폴리오)" },
-    { id: "settings", icon: Settings, label: "설정" },
-  ];
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setTodayDate(
+        new Date().toLocaleDateString("ko-KR", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          weekday: "long",
+        })
+      );
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
-  const goToPortfolio = () => {
-    setActiveMenu("portfolio");
-    setIsMobileMenuOpen(false);
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const email = user?.email?.trim();
+      if (!email) {
+        setQuizRewardCash(0);
+        setAttendanceRewardCash(0);
+        setRewardHydrated(false);
+        return;
+      }
+
+      (async () => {
+        try {
+          const res = await api.post("/api/user/rewards/get", { email });
+          if (res?.data?.success) {
+            applyRewardState(res.data.rewards);
+          } else {
+            setQuizRewardCash(0);
+            setAttendanceRewardCash(0);
+          }
+        } catch (error) {
+          console.error("Failed to load rewards", error);
+          setQuizRewardCash(0);
+          setAttendanceRewardCash(0);
+        } finally {
+          setRewardHydrated(true);
+        }
+      })();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [user, applyRewardState]);
+
+  useEffect(() => {
+    const email = user?.email?.trim();
+    if (!email || !rewardHydrated) return;
+    const todayKey = new Date().toISOString().slice(0, 10);
+
+    (async () => {
+      try {
+        const res = await api.post("/api/user/attendance/check", {
+          email,
+          date: todayKey,
+          amount: 30,
+        });
+        if (res?.data?.success) {
+          applyRewardState(res.data.rewards);
+          if (res.data.checked) {
+            alert("출석 체크 완료! 보상으로 $30가 지급되었습니다.");
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check attendance", error);
+      }
+    })();
+  }, [user, rewardHydrated, applyRewardState]);
+
+  if (!user) {
+    return <LoginPage onLogin={(userData) => setUser(userData)} />;
+  }
+
+  const handleLogout = () => {
+    setUser(null);
+    setRewardHydrated(false);
+    setQuizRewardCash(0);
+    setAttendanceRewardCash(0);
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100">
-
-      {/* 모바일 메뉴 버튼 */}
+    <div className="flex h-[100dvh] min-h-0 bg-slate-950 text-slate-100">
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-slate-800 rounded-lg border border-slate-700"
+        className="fixed left-4 top-4 z-50 rounded-lg border border-slate-700 bg-slate-800 p-2 lg:hidden"
+        aria-label="메뉴 열기"
       >
         {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
-      {/* 사이드바 */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-40 w-64 bg-slate-900 border-r border-slate-800 flex flex-col transition-transform duration-300 ${
-          isMobileMenuOpen
-            ? "translate-x-0"
-            : "-translate-x-full lg:translate-x-0"
+        className={`fixed inset-y-0 left-0 z-40 flex min-h-0 w-64 shrink-0 flex-col overflow-y-auto border-r border-slate-800 bg-slate-900 transition-transform duration-300 lg:static ${
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
-        
-        {/* 사용자 정보 (로그인 정보 연동) */}
-        <div className="pt-6 px-4 pb-4 border-t border-slate-800">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-800">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white">
-               {/* 유저 이름의 첫 글자 표시 */}
+        <div className="border-t border-slate-800 px-4 pb-4 pt-6">
+          <div className="flex items-center gap-3 rounded-lg bg-slate-800 px-4 py-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
               <span className="text-sm font-bold">{user.username.charAt(0).toUpperCase()}</span>
             </div>
-            <div className="flex-1 min-w-0">
-              {/* [수정] 실제 로그인한 유저 정보 표시 */}
-              <p className="text-sm font-semibold truncate">{user.username}</p>
-              <p className="text-xs text-slate-400 truncate">{user.email}</p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">{user.username}</p>
+              <p className="truncate text-xs text-slate-400">{user.email}</p>
             </div>
           </div>
         </div>
 
-        {/* 메뉴 */}
-        <nav className="flex-1 p-4 flex flex-col justify-between">
+        <nav className="flex flex-1 flex-col justify-between p-4">
           <ul className="space-y-2">
-            {menuItems.map((item) => {
+            {MENU_ITEMS.map((item) => {
               const Icon = item.icon;
               return (
                 <li key={item.id}>
@@ -259,7 +208,7 @@ export default function Home() {
                       setActiveMenu(item.id);
                       setIsMobileMenuOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                    className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 transition-colors ${
                       activeMenu === item.id
                         ? "bg-blue-600 text-white"
                         : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
@@ -273,14 +222,10 @@ export default function Home() {
             })}
           </ul>
 
-          {/* [추가] 로그아웃 버튼 (사이드바 하단) */}
-          <div className="pt-4 border-t border-slate-800 mt-4">
+          <div className="mt-4 border-t border-slate-800 pt-4">
             <button
-              onClick={() => {
-                localStorage.removeItem(AUTH_STORAGE_KEY);
-                setUser(null);
-              }} // 유저 상태 초기화 -> 로그인 페이지로 이동
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-red-900/20 hover:text-red-400 transition-colors"
+              onClick={handleLogout}
+              className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-slate-400 transition-colors hover:bg-red-900/20 hover:text-red-400"
             >
               <LogOut size={20} />
               <span className="font-medium">로그아웃</span>
@@ -289,12 +234,12 @@ export default function Home() {
         </nav>
       </aside>
 
-      {/* 메인 컨텐츠 */}
-      <main className="flex-1 overflow-auto custom-scrollbar">
-        {/* 상단 서비스 타이틀 (XtockXignal 로고) */}
-        <div className="w-full text-center mt-6">
-          <h1 className="inline-flex items-center gap-2 font-extrabold select-none">
-            <span className="text-8xl leading-none bg-clip-text text-transparent bg-gradient-to-br from-blue-500 to-purple-600">X</span>
+      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto custom-scrollbar">
+        <div className="mt-6 w-full text-center">
+          <h1 className="inline-flex select-none items-center gap-2 font-extrabold">
+            <span className="bg-gradient-to-br from-blue-500 to-purple-600 bg-clip-text text-8xl leading-none text-transparent">
+              X
+            </span>
             <div className="flex flex-col text-left leading-tight">
               <span className="text-4xl text-white">tock</span>
               <span className="text-4xl text-slate-500">ignal</span>
@@ -302,66 +247,45 @@ export default function Home() {
           </h1>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 py-10 lg:px-8">
-          {/* 헤더 */}
+        <div className="mx-auto max-w-7xl px-4 py-10 lg:px-8">
           <header className="mb-8">
-            <div className="flex items-center justify-between mb-2">
-              <h1 className="text-3xl md:text-4xl font-extrabold text-white">
-                {activeMenu === "dashboard" && "메인 대시보드"}
-                {activeMenu === "simulator" && "뉴스 시뮬레이터"}
-                {activeMenu === "learn" && "학습 센터"}
-                {activeMenu === "backtest" && "백테스팅"}
-                {activeMenu === "portfolio" && "내 포트폴리오"}
-                {activeMenu === "settings" && "설정"}
+            <div className="mb-2 flex items-center justify-between gap-4">
+              <h1 className="text-3xl font-extrabold text-white md:text-4xl">
+                {MENU_TITLES[activeMenu]}
               </h1>
-              <p className="text-sm text-slate-400 font-medium">
-                {todayDate}
-              </p>
+              <p className="text-sm font-medium text-slate-400">{todayDate}</p>
             </div>
-            <p className="text-sm md:text-base text-slate-400">
-              {activeMenu === "dashboard" && "오늘의 시장 동향 및 예측 요약"}
-              {activeMenu === "simulator" && "과거 경제 뉴스를 통한 시장 반응 학습 및 AI 금융 사전"}
-              {activeMenu === "learn" && "주식 기초, 기술적·기본적 분석, AI 기반 투자 학습"}
-              {activeMenu === "backtest" && "과거 데이터를 활용한 전략 검증"}
-              {activeMenu === "portfolio" && "나의 관심 종목 및 포트폴리오 관리"}
-              {activeMenu === "settings" && "앱 설정 및 개인화"}
+            <p className="text-sm text-slate-400 md:text-base">
+              {MENU_DESCRIPTIONS[activeMenu]}
             </p>
           </header>
 
-          {/* 메뉴별 컨텐츠 */}
           <div className="animate-fade-in">
-            {activeMenu === "dashboard" && (
-              <section className="mb-6 rounded-2xl bg-slate-900 border border-slate-800 p-5 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
-                <div>
-                  <p className="text-white font-bold text-lg">처음이라면 여기부터 시작하세요.</p>
-                  <p className="text-slate-400 text-sm mt-1">
-                    예시 종목 카드(예: AAPL, MSFT, TSLA)가 있는 모의 투자 화면은 왼쪽 메뉴에서
-                    <span className="text-slate-200 font-semibold"> &quot;모의 투자(포트폴리오)&quot;</span> 입니다.
-                  </p>
-                </div>
-                <button
-                  onClick={goToPortfolio}
-                  className="self-start px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-colors"
-                >
-                  모의 투자 화면으로 이동
-                </button>
-              </section>
-            )}
             {activeMenu === "dashboard" && <DashboardSection />}
+            {activeMenu === "learn" && <LearningCenter onQuizCorrect={handleQuizCorrect} />}
             {activeMenu === "simulator" && <NewsSimulatorSection />}
-            {activeMenu === "learn" && <LearningCenter />}
+            {activeMenu === "simulation" && (
+              <StockSimulationSection rewardCash={totalRewardCash} user={user} />
+            )}
+            {activeMenu === "portfolio" && (
+              <PortfolioSection user={user} isActive={activeMenu === "portfolio"} />
+            )}
             {activeMenu === "backtest" && <BacktestSection />}
-            {activeMenu === "portfolio" && <PortfolioSection user={user} />}
-            {activeMenu === "settings" && <SettingsSection user={user} />}
+            {activeMenu === "settings" && (
+              <SettingsSection
+                user={user}
+                onUserUpdate={(updated) => setUser(updated)}
+                onLogout={handleLogout}
+              />
+            )}
           </div>
         </div>
       </main>
 
-      {/* 모바일 오버레이 */}
       {isMobileMenuOpen && (
         <div
           onClick={() => setIsMobileMenuOpen(false)}
-          className="lg:hidden fixed inset-0 bg-black/50 z-30"
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
         />
       )}
     </div>

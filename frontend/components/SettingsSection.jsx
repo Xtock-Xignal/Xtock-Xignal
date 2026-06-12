@@ -1,192 +1,479 @@
 "use client";
-import { useState } from "react";
-import { useTheme } from "../components/ThemeProvider"; // 경로 확인 필요 (보통 context나 components 폴더)
+
+import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../utils/api";
-import { User, Lock, Save, ShieldCheck, Moon, Sun, Bell } from 'lucide-react';
+import { useValuationPrices } from "../hooks/useValuationPrices";
+import { computeSimulationMetrics } from "../utils/simulationPortfolio";
 
-export default function SettingsSection({ user }) {
-  const { theme, toggleTheme } = useTheme();
-  
-  // 비밀번호 변경 폼 상태 관리
-  const [formData, setFormData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: ""
-  });
-  const [loading, setLoading] = useState(false);
+const formatMoney = (n) => {
+  const num = Number(n);
+  if (Number.isNaN(num)) return "$0.00";
+  return `$${num.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+};
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+const inputClass =
+  "w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-white outline-none focus:ring-2 focus:ring-blue-500";
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // 유효성 검사
-    if (formData.newPassword !== formData.confirmPassword) {
-      alert("새 비밀번호가 일치하지 않습니다.");
+export default function SettingsSection({ user = null, onUserUpdate, onLogout }) {
+  const email = user?.email?.trim();
+
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [accountLoading, setAccountLoading] = useState(true);
+  const [profile, setProfile] = useState(null);
+
+  const [usernameInput, setUsernameInput] = useState("");
+  const [emailInput, setEmailInput] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [profileBusy, setProfileBusy] = useState(false);
+
+  const [pinIsSet, setPinIsSet] = useState(false);
+  const [oldPin, setOldPin] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [pinBusy, setPinBusy] = useState(false);
+
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  const [cash, setCash] = useState(0);
+  const [holdings, setHoldings] = useState({});
+  const [trades, setTrades] = useState([]);
+  const [simulationStarted, setSimulationStarted] = useState(false);
+
+  const loadProfile = useCallback(async () => {
+    if (!email) {
+      setProfile(null);
+      setProfileLoading(false);
       return;
     }
-    if (formData.newPassword.length < 4) {
-      alert("비밀번호는 최소 4자 이상이어야 합니다.");
-      return;
-    }
-
-    setLoading(true);
+    setProfileLoading(true);
     try {
-      const res = await api.post("/api/change-password", {
-        email: user.email, // page.js에서 넘겨준 user 정보 사용
-        current_password: formData.currentPassword,
-        new_password: formData.newPassword
-      });
-
-      if (res.data.success) {
-        alert("비밀번호가 변경되었습니다. 다음 로그인부터 적용됩니다.");
-        setFormData({ currentPassword: "", newPassword: "", confirmPassword: "" });
-      } else {
-        alert(res.data.msg || "비밀번호 변경 실패");
+      const res = await api.post("/api/user/profile", { email });
+      if (res?.data?.success && res.data.profile) {
+        const p = res.data.profile;
+        setProfile(p);
+        setUsernameInput(p.username || "");
+        setEmailInput(p.email || "");
+        setPinIsSet(Boolean(p.pin_set));
       }
-    } catch (error) {
-      console.error(error);
-      alert("서버 오류가 발생했습니다.");
+    } catch (e) {
+      console.error("Failed to load user profile", e);
+    } finally {
+      setProfileLoading(false);
     }
-    setLoading(false);
+  }, [email]);
+
+  const loadSimulationAccount = useCallback(async () => {
+    if (!email) {
+      setCash(0);
+      setHoldings({});
+      setTrades([]);
+      setSimulationStarted(false);
+      setAccountLoading(false);
+      return;
+    }
+    setAccountLoading(true);
+    try {
+      const res = await api.post("/api/simulation/state/get", { email });
+      const state = res?.data?.state;
+      if (res?.data?.success && res?.data?.exists && state) {
+        setCash(Number(state.cash) || 0);
+        setHoldings(state.holdings || {});
+        setTrades(Array.isArray(state.trades) ? state.trades : []);
+        setSimulationStarted(Boolean(state.simulation_started));
+      } else {
+        setCash(0);
+        setHoldings({});
+        setTrades([]);
+        setSimulationStarted(false);
+      }
+    } catch (e) {
+      console.error("Failed to load simulation account", e);
+    } finally {
+      setAccountLoading(false);
+    }
+  }, [email]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadProfile();
+      void loadSimulationAccount();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [loadProfile, loadSimulationAccount]);
+
+  const { getValuationPrice } = useValuationPrices(holdings, simulationStarted);
+  const { totalValue, totalPnl, holdingList } = useMemo(
+    () => computeSimulationMetrics(cash, holdings, getValuationPrice),
+    [cash, holdings, getValuationPrice]
+  );
+
+  const saveProfile = async () => {
+    if (!email) return;
+    const pwd = currentPassword.trim();
+    if (!pwd) {
+      alert("변경을 위해 현재 비밀번호를 입력해주세요.");
+      return;
+    }
+
+    const nextUsername = usernameInput.trim();
+    const nextEmail = emailInput.trim();
+    const nextPwd = newPassword.trim();
+
+    if (nextPwd && nextPwd !== confirmPassword.trim()) {
+      alert("새 비밀번호 확인이 일치하지 않습니다.");
+      return;
+    }
+
+    const body = {
+      email,
+      current_password: pwd,
+    };
+    if (nextUsername && nextUsername !== profile?.username) {
+      body.username = nextUsername;
+    }
+    if (nextEmail && nextEmail.toLowerCase() !== (profile?.email || email).toLowerCase()) {
+      body.new_email = nextEmail;
+    }
+    if (nextPwd) {
+      body.new_password = nextPwd;
+    }
+
+    if (!body.username && !body.new_email && !body.new_password) {
+      alert("변경할 항목을 입력해주세요.");
+      return;
+    }
+
+    setProfileBusy(true);
+    try {
+      const res = await api.post("/api/user/update", body);
+      if (res?.data?.success) {
+        const updated = res.data.user;
+        if (updated && onUserUpdate) {
+          onUserUpdate(updated);
+        }
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        alert(res.data.msg || "저장되었습니다.");
+        if (updated?.email && updated.email !== email) {
+          await loadSimulationAccount();
+        }
+        await loadProfile();
+      } else {
+        alert(res?.data?.msg || "저장에 실패했습니다.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("서버 오류로 저장하지 못했습니다.");
+    } finally {
+      setProfileBusy(false);
+    }
   };
+
+  const savePin = async () => {
+    const activeEmail = (profile?.email || email || "").trim();
+    if (!activeEmail) return;
+    if (!/^\d{4}$/.test(newPin)) {
+      alert("PIN은 4자리 숫자여야 합니다.");
+      return;
+    }
+    if (newPin !== confirmPin) {
+      alert("PIN 확인이 일치하지 않습니다.");
+      return;
+    }
+    if (pinIsSet && !/^\d{4}$/.test(oldPin)) {
+      alert("기존 PIN 4자리를 입력해주세요.");
+      return;
+    }
+
+    setPinBusy(true);
+    try {
+      const body = pinIsSet
+        ? { email: activeEmail, pin: newPin, old_pin: oldPin }
+        : { email: activeEmail, pin: newPin };
+      const res = await api.post("/api/simulation/pin/set", body);
+      if (res?.data?.success) {
+        setPinIsSet(true);
+        setOldPin("");
+        setNewPin("");
+        setConfirmPin("");
+        alert(res.data.msg || "PIN이 저장되었습니다.");
+        await loadProfile();
+      } else {
+        alert(res?.data?.msg || "PIN 저장에 실패했습니다.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("서버 오류로 PIN을 저장하지 못했습니다.");
+    } finally {
+      setPinBusy(false);
+    }
+  };
+
+  const deleteAccount = async () => {
+    const activeEmail = (profile?.email || email || "").trim();
+    if (!activeEmail) return;
+
+    const pwd = deletePassword.trim();
+    if (!pwd) {
+      alert("탈퇴를 위해 비밀번호를 입력해주세요.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "정말 회원탈퇴하시겠습니까?\n\n계정과 시뮬레이션 데이터가 모두 삭제되며 복구할 수 없습니다."
+    );
+    if (!confirmed) return;
+
+    setDeleteBusy(true);
+    try {
+      const res = await api.post("/api/user/delete", {
+        email: activeEmail,
+        current_password: pwd,
+      });
+      if (res?.data?.success) {
+        alert(res.data.msg || "회원탈퇴가 완료되었습니다.");
+        setDeletePassword("");
+        if (onLogout) onLogout();
+      } else {
+        alert(res?.data?.msg || "회원탈퇴에 실패했습니다.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("서버 오류로 탈퇴 처리하지 못했습니다.");
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
+  if (!email) {
+    return (
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
+        <p className="text-slate-400 text-sm">로그인 후 설정을 변경할 수 있습니다.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-4xl mx-auto pb-10">
-      
-      {/* 1. 프로필 정보 카드 (사용자 확인용) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex items-center gap-6 shadow-lg">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-2xl font-bold text-white shadow-inner">
-          {user?.username?.charAt(0).toUpperCase()}
-        </div>
-        <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            {user?.username}
-            <span className="bg-blue-900/50 text-blue-400 text-xs px-2 py-0.5 rounded border border-blue-500/30">USER</span>
-          </h2>
-          <p className="text-slate-400 text-sm">{user?.email}</p>
-        </div>
-      </div>
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 space-y-8">
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* 2. 일반 설정 (기존 기능 유지: 알림 + 테마) */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 h-fit">
-          <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-            <SettingsIcon className="text-slate-400" /> 일반 설정
-          </h3>
-          
-          <div className="space-y-1 divide-y divide-slate-800">
-            {/* 알림 설정 */}
-            <div className="flex items-center justify-between py-4">
-              <div className="flex items-center gap-3">
-                <Bell size={20} className="text-slate-400" />
-                <span className="text-slate-200">알림 설정</span>
-              </div>
-              <button className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition-colors">
-                설정
-              </button>
+      {/* 시뮬레이션 계좌 */}
+      <section className="bg-slate-800/30 border border-slate-700 rounded-2xl p-5 space-y-4">
+        <h3 className="text-white font-semibold">시뮬레이션 계좌</h3>
+        {accountLoading ? (
+          <p className="text-slate-400 text-sm">계좌 정보를 불러오는 중</p>
+        ) : !simulationStarted ? (
+          <p className="text-slate-400 text-sm">
+            아직 시작한 시뮬레이션 계좌가 없습니다. 주식 시뮬레이션에서 계좌를 시작하세요.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4">
+              <div className="text-slate-400 text-xs mb-1">가상 현금</div>
+              <div className="text-white text-lg font-bold">{formatMoney(cash)}</div>
             </div>
-
-            {/* 테마 변경 */}
-            <div className="flex items-center justify-between py-4">
-              <div className="flex items-center gap-3">
-                {theme === 'dark' ? <Moon size={20} className="text-yellow-400" /> : <Sun size={20} className="text-orange-400" />}
-                <span className="text-slate-200">테마 변경</span>
-              </div>
-              <button
-                onClick={toggleTheme}
-                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition-colors"
+            <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4">
+              <div className="text-slate-400 text-xs mb-1">계좌 총액</div>
+              <div className="text-white text-lg font-bold">{formatMoney(totalValue)}</div>
+            </div>
+            <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4">
+              <div className="text-slate-400 text-xs mb-1">총 손익</div>
+              <div
+                className={`text-lg font-bold ${
+                  totalPnl >= 0 ? "text-green-400" : "text-red-400"
+                }`}
               >
-                {theme === "dark" ? "라이트 모드" : "다크 모드"}
-              </button>
+                {totalPnl >= 0 ? "+" : "-"}
+                {formatMoney(Math.abs(totalPnl))}
+              </div>
             </div>
+            <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4">
+              <div className="text-slate-400 text-xs mb-1">보유 / 거래</div>
+              <div className="text-white text-lg font-bold">
+                {holdingList.length}종목 / {trades.length}건
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* 사용자명 / 이메일 / 비밀번호 */}
+      <section className="bg-slate-800/30 border border-slate-700 rounded-2xl p-5 space-y-4">
+        <h3 className="text-white font-semibold">프로필 변경</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-slate-300 text-xs mb-1">사용자명</label>
+            <input
+              type="text"
+              value={usernameInput}
+              onChange={(e) => setUsernameInput(e.target.value)}
+              className={inputClass}
+              autoComplete="username"
+            />
+          </div>
+          <div>
+            <label className="block text-slate-300 text-xs mb-1">이메일</label>
+            <input
+              type="email"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              className={inputClass}
+              autoComplete="email"
+            />
           </div>
         </div>
 
-        {/* 3. 보안 설정 (비밀번호 변경 폼 추가) */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-          <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-            <Lock className="text-blue-500" size={20} /> 보안 설정
-          </h3>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-slate-400 ml-1">현재 비밀번호</label>
-              <input 
-                type="password"
-                name="currentPassword"
-                value={formData.currentPassword}
-                onChange={handleChange}
-                placeholder="현재 비밀번호 입력"
-                className="w-full bg-black/30 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder:text-slate-600"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-slate-400 ml-1">새 비밀번호</label>
-              <input 
-                type="password"
-                name="newPassword"
-                value={formData.newPassword}
-                onChange={handleChange}
-                placeholder="변경할 비밀번호"
-                className="w-full bg-black/30 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder:text-slate-600"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-slate-400 ml-1">새 비밀번호 확인</label>
-              <input 
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="비밀번호 한 번 더 입력"
-                className="w-full bg-black/30 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder:text-slate-600"
-                required
-              />
-            </div>
-
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="w-full mt-2 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {loading ? "변경 중..." : (
-                <>
-                  <Save size={16} /> 변경사항 저장
-                </>
-              )}
-            </button>
-          </form>
+        <div>
+          <label className="block text-slate-300 text-xs mb-1">현재 비밀번호</label>
+          <input
+            type="password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            className={inputClass}
+            autoComplete="current-password"
+          />
         </div>
-      </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-slate-300 text-xs mb-1">새 비밀번호</label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className={inputClass}
+              autoComplete="new-password"
+            />
+          </div>
+          <div>
+            <label className="block text-slate-300 text-xs mb-1">새 비밀번호 확인</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className={inputClass}
+              autoComplete="new-password"
+            />
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => void saveProfile()}
+          disabled={profileBusy || profileLoading}
+          className="px-5 py-2.5 rounded-lg font-semibold bg-blue-600 hover:bg-blue-500 text-white text-sm disabled:opacity-50"
+        >
+          {profileBusy ? "저장 중" : "프로필 저장"}
+        </button>
+      </section>
+
+      {/* PIN */}
+      <section className="bg-slate-800/30 border border-slate-700 rounded-2xl p-5 space-y-4">
+        <h3 className="text-white font-semibold">거래 PIN 변경</h3>
+        {pinIsSet ? (
+          <div>
+            <label className="block text-slate-300 text-xs mb-1">기존 PIN</label>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={oldPin}
+              onChange={(e) => setOldPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              className={`${inputClass} max-w-[11rem] tracking-widest`}
+              autoComplete="off"
+            />
+          </div>
+        ) : null}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
+          <div>
+            <label className="block text-slate-300 text-xs mb-1">
+              {pinIsSet ? "새 PIN" : "PIN 설정"}
+            </label>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={newPin}
+              onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              className={`${inputClass} tracking-widest`}
+            />
+          </div>
+          <div>
+            <label className="block text-slate-300 text-xs mb-1">PIN 확인</label>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={confirmPin}
+              onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              className={`${inputClass} tracking-widest`}
+            />
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => void savePin()}
+          disabled={pinBusy || newPin.length !== 4 || confirmPin.length !== 4}
+          className="px-5 py-2.5 rounded-lg font-semibold bg-blue-600 hover:bg-blue-500 text-white text-sm disabled:opacity-50"
+        >
+          {pinBusy ? "저장 중" : pinIsSet ? "PIN 변경" : "PIN 설정"}
+        </button>
+      </section>
+
+      {/* 프로필 표시 */}
+      <section className="bg-slate-800/30 border border-slate-700 rounded-2xl p-5 space-y-3">
+        <h3 className="text-white font-semibold">내 정보</h3>
+        {profileLoading ? (
+          <p className="text-slate-400 text-sm">불러오는 중</p>
+        ) : (
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <div className="bg-slate-900/40 border border-slate-700 rounded-lg px-3 py-2">
+              <dt className="text-slate-500 text-xs">가입일</dt>
+              <dd className="text-slate-200 mt-0.5">{profile?.created_at || "—"}</dd>
+            </div>
+            <div className="bg-slate-900/40 border border-slate-700 rounded-lg px-3 py-2">
+              <dt className="text-slate-500 text-xs">거래 PIN</dt>
+              <dd className="text-slate-200 mt-0.5">
+                {pinIsSet
+                  ? `설정됨${profile?.simulation_pin_set_at ? ` (${profile.simulation_pin_set_at.slice(0, 10)})` : ""}`
+                  : "미설정"}
+              </dd>
+            </div>
+          </dl>
+        )}
+      </section>
+
+      {/* 회원탈퇴 */}
+      <section className="bg-red-950/20 border border-red-900/50 rounded-2xl p-5 space-y-4">
+        <h3 className="text-red-300 font-semibold">회원탈퇴</h3>
+        <p className="text-slate-400 text-sm leading-relaxed">
+          탈퇴 시 users 계정과 시뮬레이션 계좌·거래 내역이 모두 삭제되며 되돌릴 수 없습니다.
+        </p>
+        <div className="max-w-md">
+          <label className="block text-slate-300 text-xs mb-1">비밀번호 확인</label>
+          <input
+            type="password"
+            value={deletePassword}
+            onChange={(e) => setDeletePassword(e.target.value)}
+            className={inputClass}
+            autoComplete="current-password"
+            placeholder="현재 비밀번호"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => void deleteAccount()}
+          disabled={deleteBusy || !deletePassword.trim()}
+          className="px-5 py-2.5 rounded-lg font-semibold bg-red-700 hover:bg-red-600 text-white text-sm disabled:opacity-50"
+        >
+          {deleteBusy ? "처리 중…" : "회원탈퇴"}
+        </button>
+      </section>
     </div>
   );
-}
-
-// 아이콘 컴포넌트 편의용
-function SettingsIcon(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  )
 }

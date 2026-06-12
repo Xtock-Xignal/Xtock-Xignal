@@ -1,0 +1,6 @@
+geminiAPI.txt
+__pycache__/
+.omx/
+datasets/
+*.pt
+*.png

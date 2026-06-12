@@ -76,6 +76,19 @@ def test_symbols_catalog_endpoint_returns_symbols_with_names(client, monkeypatch
     assert data["items"][0]["name"] == "Apple"
 
 
+def test_symbols_catalog_endpoint_accepts_frontend_catalog_limit(client, monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "_get_backtest_symbol_catalog",
+        lambda: [{"symbol": f"T{i}", "name": f"Ticker {i}"} for i in range(150)],
+    )
+
+    response = client.get("/api/backtest/symbols?limit=300")
+
+    assert response.status_code == 200
+    assert len(response.json()["items"]) == 150
+
+
 def _build_price_rows() -> List[Dict[str, Any]]:
     return [
         {"date": f"2025-01-0{i + 1}", "close": round(10 + i * 0.5, 2)}

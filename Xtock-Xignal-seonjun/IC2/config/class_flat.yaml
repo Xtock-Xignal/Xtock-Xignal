@@ -1,0 +1,2013 @@
+ticker_classification:
+  MMM:
+    company: 3M
+    sector: Industrials
+    industry_group: Capital Goods
+  AOS:
+    company: A. O. Smith
+    sector: Industrials
+    industry_group: Capital Goods
+  ABT:
+    company: Abbott Laboratories
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  ABBV:
+    company: AbbVie
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  ACN:
+    company: Accenture
+    sector: Information Technology
+    industry_group: Software & Services
+  ADBE:
+    company: Adobe Inc.
+    sector: Information Technology
+    industry_group: Software & Services
+  AMD:
+    company: Advanced Micro Devices
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  AES:
+    company: AES Corporation
+    sector: Utilities
+    industry_group: Utilities
+  AFL:
+    company: Aflac
+    sector: Financials
+    industry_group: Insurance
+  A:
+    company: Agilent Technologies
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  APD:
+    company: Air Products
+    sector: Materials
+    industry_group: Materials
+  ABNB:
+    company: Airbnb
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  AKAM:
+    company: Akamai Technologies
+    sector: Information Technology
+    industry_group: Software & Services
+  ALB:
+    company: Albemarle Corporation
+    sector: Materials
+    industry_group: Materials
+  ARE:
+    company: Alexandria Real Estate Equities
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  ALGN:
+    company: Align Technology
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  ALLE:
+    company: Allegion
+    sector: Industrials
+    industry_group: Capital Goods
+  LNT:
+    company: Alliant Energy
+    sector: Utilities
+    industry_group: Utilities
+  ALL:
+    company: Allstate
+    sector: Financials
+    industry_group: Insurance
+  GOOGL:
+    company: Alphabet Inc. (Class A)
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  GOOG:
+    company: Alphabet Inc. (Class C)
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  MO:
+    company: Altria
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  AMZN:
+    company: Amazon
+    sector: Consumer Discretionary
+    industry_group: Consumer Discretionary Distribution & Retail
+  AMCR:
+    company: Amcor
+    sector: Materials
+    industry_group: Materials
+  AEE:
+    company: Ameren
+    sector: Utilities
+    industry_group: Utilities
+  AEP:
+    company: American Electric Power
+    sector: Utilities
+    industry_group: Utilities
+  AXP:
+    company: American Express
+    sector: Financials
+    industry_group: Financial Services
+  AIG:
+    company: American International Group
+    sector: Financials
+    industry_group: Insurance
+  AMT:
+    company: American Tower
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  AWK:
+    company: American Water Works
+    sector: Utilities
+    industry_group: Utilities
+  AMP:
+    company: Ameriprise Financial
+    sector: Financials
+    industry_group: Financial Services
+  AME:
+    company: Ametek
+    sector: Industrials
+    industry_group: Capital Goods
+  AMGN:
+    company: Amgen
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  APH:
+    company: Amphenol
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  ADI:
+    company: Analog Devices
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  AON:
+    company: Aon plc
+    sector: Financials
+    industry_group: Insurance
+  APA:
+    company: APA Corporation
+    sector: Energy
+    industry_group: Energy
+  APO:
+    company: Apollo Global Management
+    sector: Financials
+    industry_group: Financial Services
+  AAPL:
+    company: Apple Inc.
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  AMAT:
+    company: Applied Materials
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  APP:
+    company: AppLovin
+    sector: Information Technology
+    industry_group: Software & Services
+  APTV:
+    company: Aptiv
+    sector: Consumer Discretionary
+    industry_group: Automobiles & Components
+  ACGL:
+    company: Arch Capital Group
+    sector: Financials
+    industry_group: Insurance
+  ADM:
+    company: Archer Daniels Midland
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  ARES:
+    company: Ares Management
+    sector: Financials
+    industry_group: Financial Services
+  ANET:
+    company: Arista Networks
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  AJG:
+    company: Arthur J. Gallagher & Co.
+    sector: Financials
+    industry_group: Insurance
+  AIZ:
+    company: Assurant
+    sector: Financials
+    industry_group: Insurance
+  T:
+    company: AT&T
+    sector: Communication Services
+    industry_group: Telecommunication Services
+  ATO:
+    company: Atmos Energy
+    sector: Utilities
+    industry_group: Utilities
+  ADSK:
+    company: Autodesk
+    sector: Information Technology
+    industry_group: Software & Services
+  ADP:
+    company: Automatic Data Processing
+    sector: Industrials
+    industry_group: Commercial  & Professional Services
+  AZO:
+    company: AutoZone
+    sector: Consumer Discretionary
+    industry_group: Consumer Discretionary Distribution & Retail
+  AVB:
+    company: AvalonBay Communities
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  AVY:
+    company: Avery Dennison
+    sector: Materials
+    industry_group: Materials
+  AXON:
+    company: Axon Enterprise
+    sector: Industrials
+    industry_group: Capital Goods
+  BKR:
+    company: Baker Hughes
+    sector: Energy
+    industry_group: Energy
+  BALL:
+    company: Ball Corporation
+    sector: Materials
+    industry_group: Materials
+  BAC:
+    company: Bank of America
+    sector: Financials
+    industry_group: Banks
+  BAX:
+    company: Baxter International
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  BDX:
+    company: Becton Dickinson
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  BRK.B:
+    company: Berkshire Hathaway
+    sector: Financials
+    industry_group: Financial Services
+  BBY:
+    company: Best Buy
+    sector: Consumer Discretionary
+    industry_group: Consumer Discretionary Distribution & Retail
+  TECH:
+    company: Bio-Techne
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  BIIB:
+    company: Biogen
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  BLK:
+    company: BlackRock
+    sector: Financials
+    industry_group: Financial Services
+  BX:
+    company: Blackstone Inc.
+    sector: Financials
+    industry_group: Financial Services
+  XYZ:
+    company: Block, Inc.
+    sector: Financials
+    industry_group: Financial Services
+  BNY:
+    company: BNY Mellon
+    sector: Financials
+    industry_group: Financial Services
+  BA:
+    company: Boeing
+    sector: Industrials
+    industry_group: Capital Goods
+  BKNG:
+    company: Booking Holdings
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  BSX:
+    company: Boston Scientific
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  BMY:
+    company: Bristol Myers Squibb
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  AVGO:
+    company: Broadcom
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  BR:
+    company: Broadridge Financial Solutions
+    sector: Industrials
+    industry_group: Commercial  & Professional Services
+  BRO:
+    company: Brown & Brown
+    sector: Financials
+    industry_group: Insurance
+  BF.B:
+    company: Brown–Forman
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  BLDR:
+    company: Builders FirstSource
+    sector: Industrials
+    industry_group: Capital Goods
+  BG:
+    company: Bunge Global
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  BXP:
+    company: BXP, Inc.
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  CHRW:
+    company: C.H. Robinson
+    sector: Industrials
+    industry_group: Transportation
+  CDNS:
+    company: Cadence Design Systems
+    sector: Information Technology
+    industry_group: Software & Services
+  CPT:
+    company: Camden Property Trust
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  CPB:
+    company: Campbell's Company (The)
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  COF:
+    company: Capital One
+    sector: Financials
+    industry_group: Financial Services
+  CAH:
+    company: Cardinal Health
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  CCL:
+    company: Carnival Corporation
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  CARR:
+    company: Carrier Global
+    sector: Industrials
+    industry_group: Capital Goods
+  CVNA:
+    company: Carvana
+    sector: Consumer Discretionary
+    industry_group: Consumer Discretionary Distribution & Retail
+  CASY:
+    company: Casey's
+    sector: Consumer Staples
+    industry_group: Consumer Staples Distribution & Retail
+  CAT:
+    company: Caterpillar Inc.
+    sector: Industrials
+    industry_group: Capital Goods
+  CBOE:
+    company: Cboe Global Markets
+    sector: Financials
+    industry_group: Financial Services
+  CBRE:
+    company: CBRE Group
+    sector: Real Estate
+    industry_group: Real Estate Management & Development
+  CDW:
+    company: CDW Corporation
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  COR:
+    company: Cencora
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  CNC:
+    company: Centene Corporation
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  CNP:
+    company: CenterPoint Energy
+    sector: Utilities
+    industry_group: Utilities
+  CF:
+    company: CF Industries
+    sector: Materials
+    industry_group: Materials
+  CRL:
+    company: Charles River Laboratories
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  SCHW:
+    company: Charles Schwab Corporation
+    sector: Financials
+    industry_group: Financial Services
+  CHTR:
+    company: Charter Communications
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  CVX:
+    company: Chevron Corporation
+    sector: Energy
+    industry_group: Energy
+  CMG:
+    company: Chipotle Mexican Grill
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  CB:
+    company: Chubb Limited
+    sector: Financials
+    industry_group: Insurance
+  CHD:
+    company: Church & Dwight
+    sector: Consumer Staples
+    industry_group: Household & Personal Products
+  CIEN:
+    company: Ciena
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  CI:
+    company: Cigna
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  CINF:
+    company: Cincinnati Financial
+    sector: Financials
+    industry_group: Insurance
+  CTAS:
+    company: Cintas
+    sector: Industrials
+    industry_group: Commercial  & Professional Services
+  CSCO:
+    company: Cisco
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  C:
+    company: Citigroup
+    sector: Financials
+    industry_group: Banks
+  CFG:
+    company: Citizens Financial Group
+    sector: Financials
+    industry_group: Banks
+  CLX:
+    company: Clorox
+    sector: Consumer Staples
+    industry_group: Household & Personal Products
+  CME:
+    company: CME Group
+    sector: Financials
+    industry_group: Financial Services
+  CMS:
+    company: CMS Energy
+    sector: Utilities
+    industry_group: Utilities
+  KO:
+    company: Coca-Cola Company (The)
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  CTSH:
+    company: Cognizant
+    sector: Information Technology
+    industry_group: Software & Services
+  COHR:
+    company: Coherent Corp.
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  COIN:
+    company: Coinbase
+    sector: Financials
+    industry_group: Financial Services
+  CL:
+    company: Colgate-Palmolive
+    sector: Consumer Staples
+    industry_group: Household & Personal Products
+  CMCSA:
+    company: Comcast
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  FIX:
+    company: Comfort Systems USA
+    sector: Industrials
+    industry_group: Capital Goods
+  CAG:
+    company: Conagra Brands
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  COP:
+    company: ConocoPhillips
+    sector: Energy
+    industry_group: Energy
+  ED:
+    company: Consolidated Edison
+    sector: Utilities
+    industry_group: Utilities
+  STZ:
+    company: Constellation Brands
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  CEG:
+    company: Constellation Energy
+    sector: Utilities
+    industry_group: Utilities
+  COO:
+    company: Cooper Companies (The)
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  CPRT:
+    company: Copart
+    sector: Industrials
+    industry_group: Commercial  & Professional Services
+  GLW:
+    company: Corning Inc.
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  CPAY:
+    company: Corpay
+    sector: Financials
+    industry_group: Financial Services
+  CTVA:
+    company: Corteva
+    sector: Materials
+    industry_group: Materials
+  CSGP:
+    company: CoStar Group
+    sector: Real Estate
+    industry_group: Real Estate Management & Development
+  COST:
+    company: Costco
+    sector: Consumer Staples
+    industry_group: Consumer Staples Distribution & Retail
+  CRH:
+    company: CRH plc
+    sector: Materials
+    industry_group: Materials
+  CRWD:
+    company: CrowdStrike
+    sector: Information Technology
+    industry_group: Software & Services
+  CCI:
+    company: Crown Castle
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  CSX:
+    company: CSX Corporation
+    sector: Industrials
+    industry_group: Transportation
+  CMI:
+    company: Cummins
+    sector: Industrials
+    industry_group: Capital Goods
+  CVS:
+    company: CVS Health
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  DHR:
+    company: Danaher Corporation
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  DRI:
+    company: Darden Restaurants
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  DDOG:
+    company: Datadog
+    sector: Information Technology
+    industry_group: Software & Services
+  DVA:
+    company: DaVita
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  DECK:
+    company: Deckers Brands
+    sector: Consumer Discretionary
+    industry_group: Consumer Durables & Apparel
+  DE:
+    company: Deere & Company
+    sector: Industrials
+    industry_group: Capital Goods
+  DELL:
+    company: Dell Technologies
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  DAL:
+    company: Delta Air Lines
+    sector: Industrials
+    industry_group: Transportation
+  DVN:
+    company: Devon Energy
+    sector: Energy
+    industry_group: Energy
+  DXCM:
+    company: Dexcom
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  FANG:
+    company: Diamondback Energy
+    sector: Energy
+    industry_group: Energy
+  DLR:
+    company: Digital Realty
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  DG:
+    company: Dollar General
+    sector: Consumer Staples
+    industry_group: Consumer Staples Distribution & Retail
+  DLTR:
+    company: Dollar Tree
+    sector: Consumer Staples
+    industry_group: Consumer Staples Distribution & Retail
+  D:
+    company: Dominion Energy
+    sector: Utilities
+    industry_group: Utilities
+  DPZ:
+    company: Domino's
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  DASH:
+    company: DoorDash
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  DOV:
+    company: Dover Corporation
+    sector: Industrials
+    industry_group: Capital Goods
+  DOW:
+    company: Dow Inc.
+    sector: Materials
+    industry_group: Materials
+  DHI:
+    company: D. R. Horton
+    sector: Consumer Discretionary
+    industry_group: Consumer Durables & Apparel
+  DTE:
+    company: DTE Energy
+    sector: Utilities
+    industry_group: Utilities
+  DUK:
+    company: Duke Energy
+    sector: Utilities
+    industry_group: Utilities
+  DD:
+    company: DuPont
+    sector: Materials
+    industry_group: Materials
+  ETN:
+    company: Eaton Corporation
+    sector: Industrials
+    industry_group: Capital Goods
+  EBAY:
+    company: eBay Inc.
+    sector: Consumer Discretionary
+    industry_group: Consumer Discretionary Distribution & Retail
+  SATS:
+    company: EchoStar
+    sector: Communication Services
+    industry_group: Telecommunication Services
+  ECL:
+    company: Ecolab
+    sector: Materials
+    industry_group: Materials
+  EIX:
+    company: Edison International
+    sector: Utilities
+    industry_group: Utilities
+  EW:
+    company: Edwards Lifesciences
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  EA:
+    company: Electronic Arts
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  ELV:
+    company: Elevance Health
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  EME:
+    company: Emcor
+    sector: Industrials
+    industry_group: Capital Goods
+  EMR:
+    company: Emerson Electric
+    sector: Industrials
+    industry_group: Capital Goods
+  ETR:
+    company: Entergy
+    sector: Utilities
+    industry_group: Utilities
+  EOG:
+    company: EOG Resources
+    sector: Energy
+    industry_group: Energy
+  EPAM:
+    company: EPAM Systems
+    sector: Information Technology
+    industry_group: Software & Services
+  EQT:
+    company: EQT Corporation
+    sector: Energy
+    industry_group: Energy
+  EFX:
+    company: Equifax
+    sector: Industrials
+    industry_group: Commercial  & Professional Services
+  EQIX:
+    company: Equinix
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  EQR:
+    company: Equity Residential
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  ERIE:
+    company: Erie Indemnity
+    sector: Financials
+    industry_group: Insurance
+  ESS:
+    company: Essex Property Trust
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  EL:
+    company: Estée Lauder Companies (The)
+    sector: Consumer Staples
+    industry_group: Household & Personal Products
+  EG:
+    company: Everest Group
+    sector: Financials
+    industry_group: Insurance
+  EVRG:
+    company: Evergy
+    sector: Utilities
+    industry_group: Utilities
+  ES:
+    company: Eversource Energy
+    sector: Utilities
+    industry_group: Utilities
+  EXC:
+    company: Exelon
+    sector: Utilities
+    industry_group: Utilities
+  EXE:
+    company: Expand Energy
+    sector: Energy
+    industry_group: Energy
+  EXPE:
+    company: Expedia Group
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  EXPD:
+    company: Expeditors International
+    sector: Industrials
+    industry_group: Transportation
+  EXR:
+    company: Extra Space Storage
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  XOM:
+    company: ExxonMobil
+    sector: Energy
+    industry_group: Energy
+  FFIV:
+    company: F5, Inc.
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  FDS:
+    company: FactSet
+    sector: Financials
+    industry_group: Financial Services
+  FICO:
+    company: Fair Isaac
+    sector: Information Technology
+    industry_group: Software & Services
+  FAST:
+    company: Fastenal
+    sector: Industrials
+    industry_group: Capital Goods
+  FRT:
+    company: Federal Realty Investment Trust
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  FDX:
+    company: FedEx
+    sector: Industrials
+    industry_group: Transportation
+  FIS:
+    company: Fidelity National Information Services
+    sector: Financials
+    industry_group: Financial Services
+  FITB:
+    company: Fifth Third Bancorp
+    sector: Financials
+    industry_group: Banks
+  FSLR:
+    company: First Solar
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  FE:
+    company: FirstEnergy
+    sector: Utilities
+    industry_group: Utilities
+  FISV:
+    company: Fiserv
+    sector: Financials
+    industry_group: Financial Services
+  F:
+    company: Ford Motor Company
+    sector: Consumer Discretionary
+    industry_group: Automobiles & Components
+  FTNT:
+    company: Fortinet
+    sector: Information Technology
+    industry_group: Software & Services
+  FTV:
+    company: Fortive
+    sector: Industrials
+    industry_group: Capital Goods
+  FOXA:
+    company: Fox Corporation (Class A)
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  FOX:
+    company: Fox Corporation (Class B)
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  BEN:
+    company: Franklin Resources
+    sector: Financials
+    industry_group: Financial Services
+  FCX:
+    company: Freeport-McMoRan
+    sector: Materials
+    industry_group: Materials
+  GRMN:
+    company: Garmin
+    sector: Consumer Discretionary
+    industry_group: Consumer Durables & Apparel
+  IT:
+    company: Gartner
+    sector: Information Technology
+    industry_group: Software & Services
+  GE:
+    company: GE Aerospace
+    sector: Industrials
+    industry_group: Capital Goods
+  GEHC:
+    company: GE HealthCare
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  GEV:
+    company: GE Vernova
+    sector: Industrials
+    industry_group: Capital Goods
+  GEN:
+    company: Gen Digital
+    sector: Information Technology
+    industry_group: Software & Services
+  GNRC:
+    company: Generac
+    sector: Industrials
+    industry_group: Capital Goods
+  GD:
+    company: General Dynamics
+    sector: Industrials
+    industry_group: Capital Goods
+  GIS:
+    company: General Mills
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  GM:
+    company: General Motors
+    sector: Consumer Discretionary
+    industry_group: Automobiles & Components
+  GPC:
+    company: Genuine Parts Company
+    sector: Consumer Discretionary
+    industry_group: Consumer Discretionary Distribution & Retail
+  GILD:
+    company: Gilead Sciences
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  GPN:
+    company: Global Payments
+    sector: Financials
+    industry_group: Financial Services
+  GL:
+    company: Globe Life
+    sector: Financials
+    industry_group: Insurance
+  GDDY:
+    company: GoDaddy
+    sector: Information Technology
+    industry_group: Software & Services
+  GS:
+    company: Goldman Sachs
+    sector: Financials
+    industry_group: Financial Services
+  HAL:
+    company: Halliburton
+    sector: Energy
+    industry_group: Energy
+  HIG:
+    company: Hartford (The)
+    sector: Financials
+    industry_group: Insurance
+  HAS:
+    company: Hasbro
+    sector: Consumer Discretionary
+    industry_group: Consumer Durables & Apparel
+  HCA:
+    company: HCA Healthcare
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  DOC:
+    company: Healthpeak Properties
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  HSIC:
+    company: Henry Schein
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  HSY:
+    company: Hershey Company (The)
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  HPE:
+    company: Hewlett Packard Enterprise
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  HLT:
+    company: Hilton Worldwide
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  HD:
+    company: Home Depot (The)
+    sector: Consumer Discretionary
+    industry_group: Consumer Discretionary Distribution & Retail
+  HON:
+    company: Honeywell
+    sector: Industrials
+    industry_group: Capital Goods
+  HRL:
+    company: Hormel Foods
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  HST:
+    company: Host Hotels & Resorts
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  HWM:
+    company: Howmet Aerospace
+    sector: Industrials
+    industry_group: Capital Goods
+  HPQ:
+    company: HP Inc.
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  HUBB:
+    company: Hubbell Incorporated
+    sector: Industrials
+    industry_group: Capital Goods
+  HUM:
+    company: Humana
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  HBAN:
+    company: Huntington Bancshares
+    sector: Financials
+    industry_group: Banks
+  HII:
+    company: Huntington Ingalls Industries
+    sector: Industrials
+    industry_group: Capital Goods
+  IBM:
+    company: IBM
+    sector: Information Technology
+    industry_group: Software & Services
+  IEX:
+    company: IDEX Corporation
+    sector: Industrials
+    industry_group: Capital Goods
+  IDXX:
+    company: Idexx Laboratories
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  ITW:
+    company: Illinois Tool Works
+    sector: Industrials
+    industry_group: Capital Goods
+  INCY:
+    company: Incyte
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  IR:
+    company: Ingersoll Rand
+    sector: Industrials
+    industry_group: Capital Goods
+  PODD:
+    company: Insulet Corporation
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  INTC:
+    company: Intel
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  IBKR:
+    company: Interactive Brokers
+    sector: Financials
+    industry_group: Financial Services
+  ICE:
+    company: Intercontinental Exchange
+    sector: Financials
+    industry_group: Financial Services
+  IFF:
+    company: International Flavors & Fragrances
+    sector: Materials
+    industry_group: Materials
+  IP:
+    company: International Paper
+    sector: Materials
+    industry_group: Materials
+  INTU:
+    company: Intuit
+    sector: Information Technology
+    industry_group: Software & Services
+  ISRG:
+    company: Intuitive Surgical
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  IVZ:
+    company: Invesco
+    sector: Financials
+    industry_group: Financial Services
+  INVH:
+    company: Invitation Homes
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  IQV:
+    company: IQVIA
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  IRM:
+    company: Iron Mountain
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  JBHT:
+    company: J.B. Hunt
+    sector: Industrials
+    industry_group: Transportation
+  JBL:
+    company: Jabil
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  JKHY:
+    company: Jack Henry & Associates
+    sector: Financials
+    industry_group: Financial Services
+  J:
+    company: Jacobs Solutions
+    sector: Industrials
+    industry_group: Capital Goods
+  JNJ:
+    company: Johnson & Johnson
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  JCI:
+    company: Johnson Controls
+    sector: Industrials
+    industry_group: Capital Goods
+  JPM:
+    company: JPMorgan Chase
+    sector: Financials
+    industry_group: Banks
+  KVUE:
+    company: Kenvue
+    sector: Consumer Staples
+    industry_group: Household & Personal Products
+  KDP:
+    company: Keurig Dr Pepper
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  KEY:
+    company: KeyCorp
+    sector: Financials
+    industry_group: Banks
+  KEYS:
+    company: Keysight Technologies
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  KMB:
+    company: Kimberly-Clark
+    sector: Consumer Staples
+    industry_group: Household & Personal Products
+  KIM:
+    company: Kimco Realty
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  KMI:
+    company: Kinder Morgan
+    sector: Energy
+    industry_group: Energy
+  KKR:
+    company: KKR & Co.
+    sector: Financials
+    industry_group: Financial Services
+  KLAC:
+    company: KLA Corporation
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  KHC:
+    company: Kraft Heinz
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  KR:
+    company: Kroger
+    sector: Consumer Staples
+    industry_group: Consumer Staples Distribution & Retail
+  LHX:
+    company: L3Harris
+    sector: Industrials
+    industry_group: Capital Goods
+  LH:
+    company: Labcorp
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  LRCX:
+    company: Lam Research
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  LVS:
+    company: Las Vegas Sands
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  LDOS:
+    company: Leidos
+    sector: Industrials
+    industry_group: Commercial  & Professional Services
+  LEN:
+    company: Lennar
+    sector: Consumer Discretionary
+    industry_group: Consumer Durables & Apparel
+  LII:
+    company: Lennox International
+    sector: Industrials
+    industry_group: Capital Goods
+  LLY:
+    company: Lilly (Eli)
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  LIN:
+    company: Linde plc
+    sector: Materials
+    industry_group: Materials
+  LYV:
+    company: Live Nation Entertainment
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  LMT:
+    company: Lockheed Martin
+    sector: Industrials
+    industry_group: Capital Goods
+  L:
+    company: Loews Corporation
+    sector: Financials
+    industry_group: Insurance
+  LOW:
+    company: Lowe's
+    sector: Consumer Discretionary
+    industry_group: Consumer Discretionary Distribution & Retail
+  LULU:
+    company: Lululemon Athletica
+    sector: Consumer Discretionary
+    industry_group: Consumer Durables & Apparel
+  LITE:
+    company: Lumentum
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  LYB:
+    company: LyondellBasell
+    sector: Materials
+    industry_group: Materials
+  MTB:
+    company: M&T Bank
+    sector: Financials
+    industry_group: Banks
+  MPC:
+    company: Marathon Petroleum
+    sector: Energy
+    industry_group: Energy
+  MAR:
+    company: Marriott International
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  MRSH:
+    company: Marsh McLennan
+    sector: Financials
+    industry_group: Insurance
+  MLM:
+    company: Martin Marietta Materials
+    sector: Materials
+    industry_group: Materials
+  MAS:
+    company: Masco
+    sector: Industrials
+    industry_group: Capital Goods
+  MA:
+    company: Mastercard
+    sector: Financials
+    industry_group: Financial Services
+  MKC:
+    company: McCormick & Company
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  MCD:
+    company: McDonald's
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  MCK:
+    company: McKesson Corporation
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  MDT:
+    company: Medtronic
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  MRK:
+    company: Merck & Co.
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  META:
+    company: Meta Platforms
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  MET:
+    company: MetLife
+    sector: Financials
+    industry_group: Insurance
+  MTD:
+    company: Mettler Toledo
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  MGM:
+    company: MGM Resorts
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  MCHP:
+    company: Microchip Technology
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  MU:
+    company: Micron Technology
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  MSFT:
+    company: Microsoft
+    sector: Information Technology
+    industry_group: Software & Services
+  MAA:
+    company: Mid-America Apartment Communities
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  MRNA:
+    company: Moderna
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  TAP:
+    company: Molson Coors Beverage Company
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  MDLZ:
+    company: Mondelez International
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  MPWR:
+    company: Monolithic Power Systems
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  MNST:
+    company: Monster Beverage
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  MCO:
+    company: Moody's Corporation
+    sector: Financials
+    industry_group: Financial Services
+  MS:
+    company: Morgan Stanley
+    sector: Financials
+    industry_group: Financial Services
+  MOS:
+    company: Mosaic Company (The)
+    sector: Materials
+    industry_group: Materials
+  MSI:
+    company: Motorola Solutions
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  MSCI:
+    company: MSCI Inc.
+    sector: Financials
+    industry_group: Financial Services
+  NDAQ:
+    company: Nasdaq, Inc.
+    sector: Financials
+    industry_group: Financial Services
+  NTAP:
+    company: NetApp
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  NFLX:
+    company: Netflix
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  NEM:
+    company: Newmont
+    sector: Materials
+    industry_group: Materials
+  NWSA:
+    company: News Corp (Class A)
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  NWS:
+    company: News Corp (Class B)
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  NEE:
+    company: NextEra Energy
+    sector: Utilities
+    industry_group: Utilities
+  NKE:
+    company: Nike, Inc.
+    sector: Consumer Discretionary
+    industry_group: Consumer Durables & Apparel
+  NI:
+    company: NiSource
+    sector: Utilities
+    industry_group: Utilities
+  NDSN:
+    company: Nordson Corporation
+    sector: Industrials
+    industry_group: Capital Goods
+  NSC:
+    company: Norfolk Southern
+    sector: Industrials
+    industry_group: Transportation
+  NTRS:
+    company: Northern Trust
+    sector: Financials
+    industry_group: Financial Services
+  NOC:
+    company: Northrop Grumman
+    sector: Industrials
+    industry_group: Capital Goods
+  NCLH:
+    company: Norwegian Cruise Line Holdings
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  NRG:
+    company: NRG Energy
+    sector: Utilities
+    industry_group: Utilities
+  NUE:
+    company: Nucor
+    sector: Materials
+    industry_group: Materials
+  NVDA:
+    company: Nvidia
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  NVR:
+    company: NVR, Inc.
+    sector: Consumer Discretionary
+    industry_group: Consumer Durables & Apparel
+  NXPI:
+    company: NXP Semiconductors
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  ORLY:
+    company: O’Reilly Automotive
+    sector: Consumer Discretionary
+    industry_group: Consumer Discretionary Distribution & Retail
+  OXY:
+    company: Occidental Petroleum
+    sector: Energy
+    industry_group: Energy
+  ODFL:
+    company: Old Dominion
+    sector: Industrials
+    industry_group: Transportation
+  OMC:
+    company: Omnicom Group
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  'ON':
+    company: ON Semiconductor
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  OKE:
+    company: Oneok
+    sector: Energy
+    industry_group: Energy
+  ORCL:
+    company: Oracle Corporation
+    sector: Information Technology
+    industry_group: Software & Services
+  OTIS:
+    company: Otis Worldwide
+    sector: Industrials
+    industry_group: Capital Goods
+  PCAR:
+    company: Paccar
+    sector: Industrials
+    industry_group: Capital Goods
+  PKG:
+    company: Packaging Corporation of America
+    sector: Materials
+    industry_group: Materials
+  PLTR:
+    company: Palantir Technologies
+    sector: Information Technology
+    industry_group: Software & Services
+  PANW:
+    company: Palo Alto Networks
+    sector: Information Technology
+    industry_group: Software & Services
+  PSKY:
+    company: Paramount Skydance Corporation
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  PH:
+    company: Parker Hannifin
+    sector: Industrials
+    industry_group: Capital Goods
+  PAYX:
+    company: Paychex
+    sector: Industrials
+    industry_group: Commercial  & Professional Services
+  PYPL:
+    company: PayPal
+    sector: Financials
+    industry_group: Financial Services
+  PNR:
+    company: Pentair
+    sector: Industrials
+    industry_group: Capital Goods
+  PEP:
+    company: PepsiCo
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  PFE:
+    company: Pfizer
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  PCG:
+    company: PG&E Corporation
+    sector: Utilities
+    industry_group: Utilities
+  PM:
+    company: Philip Morris International
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  PSX:
+    company: Phillips 66
+    sector: Energy
+    industry_group: Energy
+  PNW:
+    company: Pinnacle West Capital
+    sector: Utilities
+    industry_group: Utilities
+  PNC:
+    company: PNC Financial Services
+    sector: Financials
+    industry_group: Banks
+  POOL:
+    company: Pool Corporation
+    sector: Consumer Discretionary
+    industry_group: Consumer Discretionary Distribution & Retail
+  PPG:
+    company: PPG Industries
+    sector: Materials
+    industry_group: Materials
+  PPL:
+    company: PPL Corporation
+    sector: Utilities
+    industry_group: Utilities
+  PFG:
+    company: Principal Financial Group
+    sector: Financials
+    industry_group: Insurance
+  PG:
+    company: Procter & Gamble
+    sector: Consumer Staples
+    industry_group: Household & Personal Products
+  PGR:
+    company: Progressive Corporation
+    sector: Financials
+    industry_group: Insurance
+  PLD:
+    company: Prologis
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  PRU:
+    company: Prudential Financial
+    sector: Financials
+    industry_group: Insurance
+  PEG:
+    company: Public Service Enterprise Group
+    sector: Utilities
+    industry_group: Utilities
+  PTC:
+    company: PTC Inc.
+    sector: Information Technology
+    industry_group: Software & Services
+  PSA:
+    company: Public Storage
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  PHM:
+    company: PulteGroup
+    sector: Consumer Discretionary
+    industry_group: Consumer Durables & Apparel
+  PWR:
+    company: Quanta Services
+    sector: Industrials
+    industry_group: Capital Goods
+  QCOM:
+    company: Qualcomm
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  DGX:
+    company: Quest Diagnostics
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  Q:
+    company: Qnity Electronics
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  RL:
+    company: Ralph Lauren Corporation
+    sector: Consumer Discretionary
+    industry_group: Consumer Durables & Apparel
+  RJF:
+    company: Raymond James Financial
+    sector: Financials
+    industry_group: Financial Services
+  RTX:
+    company: RTX Corporation
+    sector: Industrials
+    industry_group: Capital Goods
+  O:
+    company: Realty Income
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  REG:
+    company: Regency Centers
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  REGN:
+    company: Regeneron Pharmaceuticals
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  RF:
+    company: Regions Financial Corporation
+    sector: Financials
+    industry_group: Banks
+  RSG:
+    company: Republic Services
+    sector: Industrials
+    industry_group: Commercial  & Professional Services
+  RMD:
+    company: ResMed
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  RVTY:
+    company: Revvity
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  HOOD:
+    company: Robinhood Markets
+    sector: Financials
+    industry_group: Financial Services
+  ROK:
+    company: Rockwell Automation
+    sector: Industrials
+    industry_group: Capital Goods
+  ROL:
+    company: Rollins, Inc.
+    sector: Industrials
+    industry_group: Commercial  & Professional Services
+  ROP:
+    company: Roper Technologies
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  ROST:
+    company: Ross Stores
+    sector: Consumer Discretionary
+    industry_group: Consumer Discretionary Distribution & Retail
+  RCL:
+    company: Royal Caribbean Group
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  SPGI:
+    company: S&P Global
+    sector: Financials
+    industry_group: Financial Services
+  CRM:
+    company: Salesforce
+    sector: Information Technology
+    industry_group: Software & Services
+  SNDK:
+    company: Sandisk
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  SBAC:
+    company: SBA Communications
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  SLB:
+    company: Schlumberger
+    sector: Energy
+    industry_group: Energy
+  STX:
+    company: Seagate Technology
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  SRE:
+    company: Sempra
+    sector: Utilities
+    industry_group: Utilities
+  NOW:
+    company: ServiceNow
+    sector: Information Technology
+    industry_group: Software & Services
+  SHW:
+    company: Sherwin-Williams
+    sector: Materials
+    industry_group: Materials
+  SPG:
+    company: Simon Property Group
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  SWKS:
+    company: Skyworks Solutions
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  SJM:
+    company: J.M. Smucker Company (The)
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  SW:
+    company: Smurfit Westrock
+    sector: Materials
+    industry_group: Materials
+  SNA:
+    company: Snap-on
+    sector: Industrials
+    industry_group: Capital Goods
+  SOLV:
+    company: Solventum
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  SO:
+    company: Southern Company
+    sector: Utilities
+    industry_group: Utilities
+  LUV:
+    company: Southwest Airlines
+    sector: Industrials
+    industry_group: Transportation
+  SWK:
+    company: Stanley Black & Decker
+    sector: Industrials
+    industry_group: Capital Goods
+  SBUX:
+    company: Starbucks
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  STT:
+    company: State Street Corporation
+    sector: Financials
+    industry_group: Financial Services
+  STLD:
+    company: Steel Dynamics
+    sector: Materials
+    industry_group: Materials
+  STE:
+    company: Steris
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  SYK:
+    company: Stryker Corporation
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  SMCI:
+    company: Supermicro
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  SYF:
+    company: Synchrony Financial
+    sector: Financials
+    industry_group: Financial Services
+  SNPS:
+    company: Synopsys
+    sector: Information Technology
+    industry_group: Software & Services
+  SYY:
+    company: Sysco
+    sector: Consumer Staples
+    industry_group: Consumer Staples Distribution & Retail
+  TMUS:
+    company: T-Mobile US
+    sector: Communication Services
+    industry_group: Telecommunication Services
+  TROW:
+    company: T. Rowe Price
+    sector: Financials
+    industry_group: Financial Services
+  TTWO:
+    company: Take-Two Interactive
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  TPR:
+    company: Tapestry, Inc.
+    sector: Consumer Discretionary
+    industry_group: Consumer Durables & Apparel
+  TRGP:
+    company: Targa Resources
+    sector: Energy
+    industry_group: Energy
+  TGT:
+    company: Target Corporation
+    sector: Consumer Staples
+    industry_group: Consumer Staples Distribution & Retail
+  TEL:
+    company: TE Connectivity
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  TDY:
+    company: Teledyne Technologies
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  TER:
+    company: Teradyne
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  TSLA:
+    company: Tesla, Inc.
+    sector: Consumer Discretionary
+    industry_group: Automobiles & Components
+  TXN:
+    company: Texas Instruments
+    sector: Information Technology
+    industry_group: Semiconductors & Semiconductor Equipment
+  TPL:
+    company: Texas Pacific Land Corporation
+    sector: Energy
+    industry_group: Energy
+  TXT:
+    company: Textron
+    sector: Industrials
+    industry_group: Capital Goods
+  TMO:
+    company: Thermo Fisher Scientific
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  TJX:
+    company: TJX Companies
+    sector: Consumer Discretionary
+    industry_group: Consumer Discretionary Distribution & Retail
+  TKO:
+    company: TKO Group Holdings
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  TTD:
+    company: Trade Desk (The)
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  TSCO:
+    company: Tractor Supply
+    sector: Consumer Discretionary
+    industry_group: Consumer Discretionary Distribution & Retail
+  TT:
+    company: Trane Technologies
+    sector: Industrials
+    industry_group: Capital Goods
+  TDG:
+    company: TransDigm Group
+    sector: Industrials
+    industry_group: Capital Goods
+  TRV:
+    company: Travelers Companies (The)
+    sector: Financials
+    industry_group: Insurance
+  TRMB:
+    company: Trimble Inc.
+    sector: Information Technology
+    industry_group: Software & Services
+  TFC:
+    company: Truist Financial
+    sector: Financials
+    industry_group: Banks
+  TYL:
+    company: Tyler Technologies
+    sector: Information Technology
+    industry_group: Software & Services
+  TSN:
+    company: Tyson Foods
+    sector: Consumer Staples
+    industry_group: Food, Beverage & Tobacco
+  USB:
+    company: U.S. Bancorp
+    sector: Financials
+    industry_group: Banks
+  UBER:
+    company: Uber
+    sector: Industrials
+    industry_group: Transportation
+  UDR:
+    company: UDR, Inc.
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  ULTA:
+    company: Ulta Beauty
+    sector: Consumer Discretionary
+    industry_group: Consumer Discretionary Distribution & Retail
+  UNP:
+    company: Union Pacific Corporation
+    sector: Industrials
+    industry_group: Transportation
+  UAL:
+    company: United Airlines Holdings
+    sector: Industrials
+    industry_group: Transportation
+  UPS:
+    company: United Parcel Service
+    sector: Industrials
+    industry_group: Transportation
+  URI:
+    company: United Rentals
+    sector: Industrials
+    industry_group: Capital Goods
+  UNH:
+    company: UnitedHealth Group
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  UHS:
+    company: Universal Health Services
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  VLO:
+    company: Valero Energy
+    sector: Energy
+    industry_group: Energy
+  VEEV:
+    company: Veeva Systems
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  VTR:
+    company: Ventas
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  VLTO:
+    company: Veralto
+    sector: Industrials
+    industry_group: Commercial  & Professional Services
+  VRSN:
+    company: Verisign
+    sector: Information Technology
+    industry_group: Software & Services
+  VRSK:
+    company: Verisk Analytics
+    sector: Industrials
+    industry_group: Commercial  & Professional Services
+  VZ:
+    company: Verizon
+    sector: Communication Services
+    industry_group: Telecommunication Services
+  VRTX:
+    company: Vertex Pharmaceuticals
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  VRT:
+    company: Vertiv
+    sector: Industrials
+    industry_group: Capital Goods
+  VTRS:
+    company: Viatris
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  VICI:
+    company: Vici Properties
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  V:
+    company: Visa Inc.
+    sector: Financials
+    industry_group: Financial Services
+  VST:
+    company: Vistra Corp.
+    sector: Utilities
+    industry_group: Utilities
+  VMC:
+    company: Vulcan Materials Company
+    sector: Materials
+    industry_group: Materials
+  WRB:
+    company: W. R. Berkley Corporation
+    sector: Financials
+    industry_group: Insurance
+  GWW:
+    company: W. W. Grainger
+    sector: Industrials
+    industry_group: Capital Goods
+  WAB:
+    company: Wabtec
+    sector: Industrials
+    industry_group: Capital Goods
+  WMT:
+    company: Walmart
+    sector: Consumer Staples
+    industry_group: Consumer Staples Distribution & Retail
+  DIS:
+    company: Walt Disney Company (The)
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  WBD:
+    company: Warner Bros. Discovery
+    sector: Communication Services
+    industry_group: Media & Entertainment
+  WM:
+    company: Waste Management
+    sector: Industrials
+    industry_group: Commercial  & Professional Services
+  WAT:
+    company: Waters Corporation
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences
+  WEC:
+    company: WEC Energy Group
+    sector: Utilities
+    industry_group: Utilities
+  WFC:
+    company: Wells Fargo
+    sector: Financials
+    industry_group: Banks
+  WELL:
+    company: Welltower
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  WST:
+    company: West Pharmaceutical Services
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  WDC:
+    company: Western Digital
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  WY:
+    company: Weyerhaeuser
+    sector: Real Estate
+    industry_group: Equity Real Estate Investment Trusts (REITs)
+  WSM:
+    company: Williams-Sonoma, Inc.
+    sector: Consumer Discretionary
+    industry_group: Consumer Discretionary Distribution & Retail
+  WMB:
+    company: Williams Companies
+    sector: Energy
+    industry_group: Energy
+  WTW:
+    company: Willis Towers Watson
+    sector: Financials
+    industry_group: Insurance
+  WDAY:
+    company: Workday, Inc.
+    sector: Information Technology
+    industry_group: Software & Services
+  WYNN:
+    company: Wynn Resorts
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  XEL:
+    company: Xcel Energy
+    sector: Utilities
+    industry_group: Utilities
+  XYL:
+    company: Xylem Inc.
+    sector: Industrials
+    industry_group: Capital Goods
+  YUM:
+    company: Yum! Brands
+    sector: Consumer Discretionary
+    industry_group: Consumer Services
+  ZBRA:
+    company: Zebra Technologies
+    sector: Information Technology
+    industry_group: Technology Hardware & Equipment
+  ZBH:
+    company: Zimmer Biomet
+    sector: Health Care
+    industry_group: Health Care Equipment & Services
+  ZTS:
+    company: Zoetis
+    sector: Health Care
+    industry_group: Pharmaceuticals, Biotechnology & Life Sciences

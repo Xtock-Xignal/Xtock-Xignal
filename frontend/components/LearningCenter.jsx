@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 const LEARN_SECTIONS = [
   {
@@ -179,13 +179,183 @@ const LEARN_SECTIONS = [
   },
 ];
 
+function shuffle(array) {
+  const copied = [...array];
+  for (let i = copied.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copied[i], copied[j]] = [copied[j], copied[i]];
+  }
+  return copied;
+}
 
-export default function LearningCenter() {
+function buildQuiz(words) {
+  return shuffle(words)
+    .slice(0, Math.min(8, words.length))
+    .map((word) => {
+      const wrongOptions = shuffle(
+        words.filter((item) => item.term !== word.term).map((item) => item.term),
+      ).slice(0, 3);
+
+      return {
+        question: `"${word.def}" ?ㅻ챸???대떦?섎뒗 ?⑹뼱??臾댁뾿?쇨퉴??`,
+        answer: word.term,
+        options: shuffle([word.term, ...wrongOptions]),
+      };
+    });
+}
+
+export default function LearningCenter({ onQuizCorrect }) {
+  const allWords = useMemo(
+    () => LEARN_SECTIONS.flatMap((section) => section.words),
+    [],
+  );
   const [activeId, setActiveId] = useState(LEARN_SECTIONS[0].id);
+  const [viewMode, setViewMode] = useState("learn");
+  const [quizItems, setQuizItems] = useState(() => buildQuiz(allWords));
+  const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [showResult, setShowResult] = useState(false);
   const active = LEARN_SECTIONS.find((s) => s.id === activeId);
+  const currentQuiz = quizItems[currentQuizIndex];
+
+  function buildQuizUnused(words) {
+    return shuffle(words)
+      .slice(0, Math.min(8, words.length))
+      .map((word) => {
+        const wrongOptions = shuffle(
+          words.filter((item) => item.term !== word.term).map((item) => item.term),
+        ).slice(0, 3);
+
+        return {
+          question: `"${word.def}" 설명에 해당하는 용어는 무엇일까요?`,
+          answer: word.term,
+          options: shuffle([word.term, ...wrongOptions]),
+        };
+      });
+  }
+
+  const resetQuiz = () => {
+    setQuizItems(buildQuiz(allWords));
+    setCurrentQuizIndex(0);
+    setSelectedAnswer(null);
+    setShowResult(false);
+  };
+
+  const checkAnswer = () => {
+    if (!selectedAnswer || showResult) return;
+    setShowResult(true);
+    if (selectedAnswer === currentQuiz.answer) {
+      onQuizCorrect?.();
+    }
+  };
+
+  const moveToNext = () => {
+    const isLast = currentQuizIndex === quizItems.length - 1;
+    if (isLast) return;
+    setCurrentQuizIndex((prev) => prev + 1);
+    setSelectedAnswer(null);
+    setShowResult(false);
+  };
 
   return (
     <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 lg:p-8">
+      <div className="mb-4 flex flex-wrap gap-2">
+        <button
+          onClick={() => setViewMode("learn")}
+          className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            viewMode === "learn"
+              ? "bg-blue-600 text-white"
+              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+          }`}
+        >
+          학습 모드
+        </button>
+        <button
+          onClick={() => {
+            setViewMode("quiz");
+            if (quizItems.length === 0) {
+              resetQuiz();
+            }
+          }}
+          className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            viewMode === "quiz"
+              ? "bg-blue-600 text-white"
+              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+          }`}
+        >
+          퀴즈 모드
+        </button>
+      </div>
+
+      {viewMode === "quiz" ? (
+        <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+          </div>
+
+          {currentQuiz ? (
+            <>
+              <p className="mb-4 rounded-lg bg-slate-800/80 p-4 text-sm text-slate-100 leading-relaxed">
+                {currentQuiz.question}
+              </p>
+
+              <div className="space-y-2">
+                {currentQuiz.options.map((option) => {
+                  const isSelected = selectedAnswer === option;
+                  const isCorrect = currentQuiz.answer === option;
+                  const showCorrect = showResult && isCorrect;
+                  const showWrong = showResult && isSelected && !isCorrect;
+
+                  return (
+                    <button
+                      key={option}
+                      onClick={() => !showResult && setSelectedAnswer(option)}
+                      className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition-colors ${
+                        showCorrect
+                          ? "border-emerald-500 bg-emerald-500/15 text-emerald-300"
+                          : showWrong
+                            ? "border-rose-500 bg-rose-500/15 text-rose-300"
+                            : isSelected
+                              ? "border-blue-500 bg-blue-500/15 text-blue-200"
+                              : "border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <button
+                  onClick={checkAnswer}
+                  disabled={!selectedAnswer || showResult}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  정답 확인
+                </button>
+                <button
+                  onClick={moveToNext}
+                  disabled={!showResult || currentQuizIndex === quizItems.length - 1}
+                  className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  다음 문제
+                </button>
+              </div>
+
+              {showResult ? (
+                <p className="mt-4 text-sm text-slate-300">
+                  {selectedAnswer === currentQuiz.answer
+                    ? "정답입니다! 초기 가상 자금에 $50 추가되었습니다."
+                    : `오답입니다. 정답은 "${currentQuiz.answer}" 입니다.`}
+                </p>
+              ) : null}
+
+            </>
+          ) : (
+            <p className="text-sm text-slate-300">퀴즈를 불러오는 중입니다.</p>
+          )}
+        </div>
+      ) : (
       <div className="flex flex-col lg:flex-row gap-6">
 
         {/* 왼쪽 메뉴 */}
@@ -242,10 +412,9 @@ export default function LearningCenter() {
             ))}
           </section>
 
-          <section className="mt-6 rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-xs text-slate-400">
-          </section>
         </div>
       </div>
+      )}
     </section>
   );
 }
