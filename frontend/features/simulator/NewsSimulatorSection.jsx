@@ -57,9 +57,6 @@ export default function NewsSimulatorSection() {
   const [isLoadingNews, setIsLoadingNews] = useState(true);
   const [symbolInput, setSymbolInput] = useState("");
 
-  const [matchedTerms, setMatchedTerms] = useState([]);
-  const [isScanning, setIsScanning] = useState(false);
-
   const [isTranslated, setIsTranslated] = useState(false);
   const [translatedText, setTranslatedText] = useState("");
   const [isTranslating, setIsTranslating] = useState(false);
@@ -86,7 +83,6 @@ export default function NewsSimulatorSection() {
     setIsTranslated(false);
     setTranslatedText("");
     setTooltip({ show: false, x: 0, y: 0, text: "" });
-    setMatchedTerms([]);
     setSelectedArticle(article);
   };
 
@@ -94,7 +90,6 @@ export default function NewsSimulatorSection() {
     setIsTranslated(false);
     setTranslatedText("");
     setTooltip({ show: false, x: 0, y: 0, text: "" });
-    setMatchedTerms([]);
     setSelectedArticle(null);
   };
 
@@ -130,26 +125,6 @@ export default function NewsSimulatorSection() {
     return () => window.clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (!selectedArticle) return;
-
-    const scanArticle = async () => {
-      setIsScanning(true);
-      try {
-        const fullText = `${selectedArticle.original || ""} ${selectedArticle.translated || ""}`;
-        const res = await api.post("/api/terms/scan", { text: fullText });
-        setMatchedTerms(res.data?.matched_terms || []);
-      } catch (error) {
-        console.error("용어 스캔 실패:", error);
-        setMatchedTerms([]);
-      } finally {
-        setIsScanning(false);
-      }
-    };
-
-    void scanArticle();
-  }, [selectedArticle]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -247,45 +222,10 @@ export default function NewsSimulatorSection() {
         error: false,
       });
 
-      if (responseData?.found) {
-        setMatchedTerms((prev) => {
-          const enTerm = responseData.en_term || termToSearch;
-          if (prev.some((t) => t.en_term?.toLowerCase() === enTerm.toLowerCase())) return prev;
-          return [...prev, { en_term: enTerm, ko_term: responseData.ko_term || "" }];
-        });
-      }
     } catch (error) {
       console.error("용어 검색 실패:", error);
       setDictModal({ isOpen: true, isLoading: false, term: termToSearch, data: null, error: true });
     }
-  };
-
-  const renderHighlightedText = (text) => {
-    if (!text || !matchedTerms.length) return text;
-
-    const wordsToHighlight = matchedTerms
-      .flatMap((term) => [term.en_term?.trim(), term.ko_term?.trim()])
-      .filter(Boolean);
-    if (!wordsToHighlight.length) return text;
-
-    const escapedWords = wordsToHighlight.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-    const regexPattern = new RegExp(`(${escapedWords.join("|")})`, "gi");
-    const parts = text.split(regexPattern);
-
-    return parts.map((part, index) => {
-      const match = wordsToHighlight.find((word) => word.toLowerCase() === part.toLowerCase());
-      if (!match) return part;
-      return (
-        <span
-          key={`${part}-${index}`}
-          onClick={() => handleSearchDictionary(part)}
-          className="rounded border-b border-blue-500/60 bg-blue-500/15 px-0.5 font-semibold text-blue-300 hover:bg-blue-500/30 cursor-pointer"
-          title="클릭해서 용어 뜻 보기"
-        >
-          {part}
-        </span>
-      );
-    });
   };
 
   const renderIndustryBadge = (classification) => {
@@ -324,6 +264,7 @@ export default function NewsSimulatorSection() {
               <input
                 value={symbolInput}
                 onChange={(e) => setSymbolInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") fetchLiveNews(true); }}
                 className="min-w-0 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-blue-500 sm:w-[24rem]"
                 placeholder="예: AAPL,NVDA,TSLA"
                 aria-label="뉴스 조회 티커"
@@ -410,7 +351,6 @@ export default function NewsSimulatorSection() {
           <div onMouseUp={handleMouseUp}>
             <div className="mb-2 flex items-start justify-between gap-3">
               <h2 className="text-2xl font-bold leading-tight text-white">{selectedArticle.title}</h2>
-              {isScanning && <Loader2 className="shrink-0 animate-spin text-blue-500" size={20} />}
             </div>
             <div className="mb-8 flex flex-wrap items-center gap-3 text-sm text-slate-500">
               <span className="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-slate-300">
@@ -446,7 +386,7 @@ export default function NewsSimulatorSection() {
                 </div>
                 <div className="max-h-[440px] flex-1 overflow-y-auto pr-2 custom-scrollbar">
                   <p className="whitespace-pre-wrap break-keep font-serif text-lg leading-relaxed text-slate-300">
-                    {renderHighlightedText(articleBody)}
+                    {articleBody}
                   </p>
                 </div>
               </div>
@@ -497,9 +437,7 @@ export default function NewsSimulatorSection() {
           <div className="mt-8 flex items-start gap-3 rounded-lg border border-blue-900/50 bg-blue-900/20 p-4 select-none">
             <span className="text-xl text-blue-400">💡</span>
             <p className="text-sm text-slate-400">
-              파란색으로{" "}
-              <strong className="rounded bg-blue-500/20 px-1 text-blue-300">강조된 단어</strong>를
-              클릭하거나, 모르는 단어를 마우스로{" "}
+              모르는 단어를 마우스로{" "}
               <strong className="text-slate-200">드래그</strong>해보세요.
               AI 금융 사전이 즉시 뜻을 알려드립니다. 검색된 용어는 DB에 저장되어 다음 검색은 더 빠릅니다.
             </p>
