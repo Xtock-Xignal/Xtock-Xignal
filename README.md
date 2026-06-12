@@ -78,7 +78,7 @@ XTock-Xignal은 단순한 정보 제공을 넘어 **[정보 습득 ➔ 자산 �
 | 기술 | 엔지니어링 전략 및 활용 |
 | :---: | :--- |
 | <img src="https://cdn.simpleicons.org/googlegemini/8E75B2" width="35" title="Google Gemini API"/> | **On-Demand 문맥 요약**: 전체 기사 일괄 처리가 아닌, 사용자가 요청한 시점에만 제한적으로 API를 호출하여 과금 및 한도 초과 방지. |
-| <img src="https://cdn.simpleicons.org/huggingface/FFD21E" width="35" title="Hugging Face"/> | **외부 종속성 제거 (로컬 <mark>BERT(수정 필요)</mark> 탑재)**: 외부 상용 API 연동 없이 서버 인프라 내부에서 수천 건의 기사 문맥을 실시간 분석하여 S&P 500 산업군별 자동 태깅 수행. |
+| <img src="https://cdn.simpleicons.org/huggingface/FFD21E" width="35" title="Hugging Face"/> | **외부 종속성 제거 (로컬 <mark>BAAI/bge-m3</mark> 탑재)**: 외부 상용 API 연동 없이 서버 인프라 내부에서 수천 건의 기사 문맥을 실시간 분석하여 S&P 500 산업군별 자동 태깅 수행. |
 | <img src="./docs/yahoo.jpg" width="35" title="Yahoo Finance"/> | **증분 크롤링(Incremental Crawling)**: 독립된 백그라운드 스케줄러가 메인 서버 트래픽과 무관하게 신규 발행된 경제 기사 원문만 선별 수집하여 네트워크 I/O 부하 차단. |
 | <img src="./docs/Finnhub.png" width="35" title="Finnhub"/> | **<mark>실시간 뉴스 크롤링 및 주가 동기화(내용 수정 필요)</mark>**: 모의투자 체결 엔진을 위해 유효한 티커(Ticker) 상태와 정확한 호가를 실시간 검증함과 동시에 보조 뉴스 파이프라인으로 동작. |
 
