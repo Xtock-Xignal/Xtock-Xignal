@@ -201,6 +201,19 @@ const isNyseOpen = () => {
   return totalMinutes >= 9 * 60 + 30 && totalMinutes < 16 * 60;
 };
 
+const getNyseKstLabel = () => {
+  const now = new Date();
+  const tzName = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    timeZoneName: "short",
+  }).formatToParts(now).find((p) => p.type === "timeZoneName")?.value;
+  // EDT = UTC-4 (서머타임, 3~11월), EST = UTC-5 (겨울, 11~3월)
+  const isEDT = tzName === "EDT";
+  const open = isEDT ? "오후 10:30" : "오후 11:30";
+  const close = isEDT ? "오전 5:00 (익일)" : "오전 6:00 (익일)";
+  return { open, close };
+};
+
 const REALTIME_CHART_MAX_POINTS = 100;
 
 const capRealtimeRows = (rows, maxLength = REALTIME_CHART_MAX_POINTS) =>
@@ -1722,15 +1735,22 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
               </div>
             </div>
 
-            {activeChartSource === "realtime" && !isNyseOpen() && (
-              <div className="mb-3 flex items-center gap-2 rounded-lg border border-amber-900/50 bg-amber-900/20 px-4 py-2 text-sm text-amber-300">
-                <span>🔴</span>
-                <span>
-                  현재 미국 주식 시장이 닫혀 있습니다 (NYSE 운영: 월~금 오전 9:30 ~ 오후 4:00 ET).
-                  실시간 데이터가 지연되거나 수신되지 않을 수 있습니다.
-                </span>
-              </div>
-            )}
+            {activeChartSource === "realtime" && !isNyseOpen() && (() => {
+              const kst = getNyseKstLabel();
+              return (
+                <div className="mb-3 rounded-lg border border-amber-900/50 bg-amber-900/20 px-4 py-3 text-sm text-amber-300">
+                  <div className="flex items-center gap-2 font-semibold mb-1">
+                    <span>🔴</span>
+                    <span>현재 미국 주식 시장이 닫혀 있습니다</span>
+                  </div>
+                  <div className="text-xs text-amber-400/80 space-y-0.5 pl-6">
+                    <div>NYSE 운영시간 · 미국(ET): 월~금 오전 9:30 ~ 오후 4:00</div>
+                    <div>NYSE 운영시간 · 한국(KST): 월~금 {kst.open} ~ {kst.close}</div>
+                    <div className="text-amber-500/60 mt-1">실시간 데이터가 지연되거나 수신되지 않을 수 있습니다.</div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {series.length ? (
               <div className="h-[380px] w-full overflow-visible rounded-xl border border-slate-800/80 bg-slate-900/20">
