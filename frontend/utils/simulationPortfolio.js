@@ -1,18 +1,3 @@
-export const toISODateInput = (d) => {
-  const x = new Date(d);
-  x.setHours(12, 0, 0, 0);
-  return x.toISOString().slice(0, 10);
-};
-
-/** 시뮬레이션·포트폴리오 평가용 기본 조회 기간 (최근 100일) */
-export const defaultValuationDateRange = () => {
-  const end = new Date();
-  end.setHours(12, 0, 0, 0);
-  const start = new Date(end);
-  start.setDate(start.getDate() - 99);
-  return { start: toISODateInput(start), end: toISODateInput(end) };
-};
-
 export const filterActiveHoldings = (holdings) =>
   Object.entries(holdings || {}).filter(([, h]) => (Number(h?.shares) || 0) > 0);
 

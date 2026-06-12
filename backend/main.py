@@ -14,11 +14,9 @@ from pymongo import MongoClient
 from passlib.context import CryptContext
 from app.api.news import router as news_router
 from app.api.dashboard_router import create_dashboard_router
-from app.api.industry_router import router as industry_router
 from app.api.terms import router as terms_router
 from app.services import backtest_service
 from chart.router import router as chart_router
-from simulation.router import router as simulation_router
 
 load_dotenv()
 
@@ -196,9 +194,7 @@ app.add_middleware(
 )
 
 app.include_router(news_router, prefix="/api/news")
-app.include_router(industry_router, prefix="/api/industry")
 app.include_router(chart_router)
-app.include_router(simulation_router)
 app.include_router(create_dashboard_router(yf))
 app.include_router(terms_router, prefix="/api/terms")
 
