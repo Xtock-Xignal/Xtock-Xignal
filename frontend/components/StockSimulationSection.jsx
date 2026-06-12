@@ -184,6 +184,23 @@ const getWebSocketUrl = (path) => {
   return url.toString();
 };
 
+const isNyseOpen = () => {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  }).formatToParts(now);
+  const day = parts.find((p) => p.type === "weekday")?.value;
+  const hour = parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10);
+  const minute = parseInt(parts.find((p) => p.type === "minute")?.value || "0", 10);
+  if (day === "Sat" || day === "Sun") return false;
+  const totalMinutes = hour * 60 + minute;
+  return totalMinutes >= 9 * 60 + 30 && totalMinutes < 16 * 60;
+};
+
 const REALTIME_CHART_MAX_POINTS = 100;
 
 const capRealtimeRows = (rows, maxLength = REALTIME_CHART_MAX_POINTS) =>
@@ -1704,6 +1721,16 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
                 </div>
               </div>
             </div>
+
+            {activeChartSource === "realtime" && !isNyseOpen() && (
+              <div className="mb-3 flex items-center gap-2 rounded-lg border border-amber-900/50 bg-amber-900/20 px-4 py-2 text-sm text-amber-300">
+                <span>🔴</span>
+                <span>
+                  현재 미국 주식 시장이 닫혀 있습니다 (NYSE 운영: 월~금 오전 9:30 ~ 오후 4:00 ET).
+                  실시간 데이터가 지연되거나 수신되지 않을 수 있습니다.
+                </span>
+              </div>
+            )}
 
             {series.length ? (
               <div className="h-[380px] w-full overflow-visible rounded-xl border border-slate-800/80 bg-slate-900/20">

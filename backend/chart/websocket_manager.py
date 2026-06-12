@@ -45,9 +45,37 @@ class SymbolHub:
                 "time": self.last_time,
                 "row": row,
             })
+        else:
+            # 첫 연결 시 스트림 틱을 기다리지 않고 현재 가격을 즉시 전송
+            asyncio.create_task(self._send_initial_snapshot(websocket))
 
         if self.stream_task is None or self.stream_task.done():
             self.stream_task = asyncio.create_task(self.run_stream())
+
+    async def _send_initial_snapshot(self, websocket: WebSocket):
+        try:
+            loop = asyncio.get_event_loop()
+            ticker = await loop.run_in_executor(None, lambda: yf.Ticker(self.symbol))
+            fi = await loop.run_in_executor(None, lambda: ticker.fast_info)
+            price = getattr(fi, "last_price", None) or getattr(fi, "regular_market_price", None)
+            if not price or float(price) <= 0:
+                return
+            price = float(price)
+            now = datetime.now(timezone.utc).astimezone().isoformat()
+            row = self.to_chart_row(price, now)
+            await websocket.send_json({
+                "type": "tick",
+                "symbol": self.symbol,
+                "price": price,
+                "time": now,
+                "row": row,
+                "source": "snapshot",
+            })
+            if self.last_price is None:
+                self.last_price = price
+                self.last_time = now
+        except Exception:
+            pass
 
     def disconnect(self, websocket: WebSocket):
         self.clients.discard(websocket)
