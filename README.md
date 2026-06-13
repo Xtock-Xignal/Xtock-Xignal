@@ -1,7 +1,7 @@
 <div align="center">
   <img src="./docs/logo.png" alt="XTock-Xignal Logo" width="200"/>
 
-  # XTock-Xignal
+  # Xtock-Xignal
 
   [![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
   [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg)](https://fastapi.tiangolo.com/)
