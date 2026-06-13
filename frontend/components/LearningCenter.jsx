@@ -211,13 +211,14 @@ export default function LearningCenter({ onQuizCorrect }) {
               <div className="mb-4 rounded-lg bg-slate-800/80 p-4 text-sm text-slate-100 leading-relaxed">
                 {(() => {
                   const q = currentQuiz.question;
-                  const idx = q.search(/\?["""]/);
-                  if (idx !== -1) {
+                  // ?뒤에 공백/줄바꿈 포함, 다양한 따옴표 형태 매칭
+                  const match = q.match(/^(.*?\?)(\s*["'"「『\n].*)$/s);
+                  if (match) {
                     return (
                       <>
-                        <span>{q.slice(0, idx + 1)}</span>
+                        <span>{match[1]}</span>
                         <br />
-                        <span className="text-blue-200 mt-1 block">{q.slice(idx + 1)}</span>
+                        <span className="text-blue-200 mt-1 block">{match[2].trimStart()}</span>
                       </>
                     );
                   }
