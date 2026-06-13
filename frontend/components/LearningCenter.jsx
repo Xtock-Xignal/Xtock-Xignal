@@ -90,6 +90,7 @@ export default function LearningCenter({ onQuizCorrect }) {
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [showResult, setShowResult] = useState(false);
   const [quizLoading, setQuizLoading] = useState(false);
+  const [quizPreparing, setQuizPreparing] = useState(false);
   const [quizError, setQuizError] = useState(null);
 
   const active = LEARN_SECTIONS.find((s) => s.id === activeId);
@@ -105,13 +106,25 @@ export default function LearningCenter({ onQuizCorrect }) {
         setCurrentQuizIndex(0);
         setSelectedAnswer(null);
         setShowResult(false);
+        return;
+      }
+      // DB가 비어있으면 자동 생성 후 재조회
+      setQuizPreparing(true);
+      await api.post("/api/quiz/generate");
+      const res2 = await api.get("/api/quiz/fetch?count=8");
+      if (res2.data.success && res2.data.quizzes.length > 0) {
+        setQuizItems(res2.data.quizzes);
+        setCurrentQuizIndex(0);
+        setSelectedAnswer(null);
+        setShowResult(false);
       } else {
-        setQuizError("퀴즈를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.");
+        setQuizError("퀴즈 준비에 실패했습니다. 잠시 후 다시 시도해주세요.");
       }
     } catch {
       setQuizError("퀴즈 로딩 중 오류가 발생했습니다.");
     } finally {
       setQuizLoading(false);
+      setQuizPreparing(false);
     }
   }, []);
 
@@ -169,7 +182,16 @@ export default function LearningCenter({ onQuizCorrect }) {
       {viewMode === "quiz" ? (
         <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-5">
           {quizLoading ? (
-            <p className="text-sm text-slate-400">AI가 퀴즈를 불러오는 중입니다...</p>
+            <div className="py-8 text-center">
+              {quizPreparing ? (
+                <>
+                  <p className="text-sm font-medium text-slate-200 mb-1">퀴즈를 준비 중입니다.</p>
+                  <p className="text-xs text-slate-500">AI가 문제를 생성하고 있습니다. 잠시만 기다려주세요...</p>
+                </>
+              ) : (
+                <p className="text-sm text-slate-400">퀴즈를 불러오는 중입니다...</p>
+              )}
+            </div>
           ) : quizError ? (
             <div>
               <p className="text-sm text-rose-400 mb-3">{quizError}</p>
@@ -186,9 +208,22 @@ export default function LearningCenter({ onQuizCorrect }) {
                 {currentQuizIndex + 1} / {quizItems.length}
               </div>
 
-              <p className="mb-4 rounded-lg bg-slate-800/80 p-4 text-sm text-slate-100 leading-relaxed">
-                {currentQuiz.question}
-              </p>
+              <div className="mb-4 rounded-lg bg-slate-800/80 p-4 text-sm text-slate-100 leading-relaxed">
+                {(() => {
+                  const q = currentQuiz.question;
+                  const idx = q.search(/\?["""]/);
+                  if (idx !== -1) {
+                    return (
+                      <>
+                        <span>{q.slice(0, idx + 1)}</span>
+                        <br />
+                        <span className="text-blue-200 mt-1 block">{q.slice(idx + 1)}</span>
+                      </>
+                    );
+                  }
+                  return q;
+                })()}
+              </div>
 
               <div className="space-y-2">
                 {currentQuiz.options.map((option) => {
