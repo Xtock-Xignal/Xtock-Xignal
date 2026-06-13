@@ -13,17 +13,6 @@ services:
       - mongo-db
     restart: always
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.prod
-    container_name: xtock-frontend
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
-    restart: always
-
   data-pipeline:
     build:
       context: ./data_pipeline
