@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   BookOpen,
   ChevronLeft,
@@ -47,8 +46,7 @@ const formatDate = (dateVal) => {
   }
 };
 
-export default function NewsSimulatorSection() {
-  const router = useRouter();
+export default function NewsSimulatorSection({ onTickerClick }) {
   const articleRef = useRef(null);
 
   const [newsList, setNewsList] = useState([]);
@@ -241,7 +239,7 @@ export default function NewsSimulatorSection() {
   };
 
   const handleTagClick = (ticker) => {
-    router.push(`/?tab=dashboard&ticker=${ticker}`);
+    if (onTickerClick) onTickerClick(ticker);
   };
 
   const articleBody = isTranslated ? translatedText : selectedArticle?.original || "";

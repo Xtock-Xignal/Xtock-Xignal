@@ -447,7 +447,7 @@ function ChartOhlcTooltip({ active, payload, label, isRealtime, sessionHigh, ses
 }
 
 const INITIAL_CASH_DEFAULT = 5000; // 5000 달러(가상)
-export default function StockSimulationSection({ rewardCash = 0, user = null }) {
+export default function StockSimulationSection({ rewardCash = 0, user = null, initialTicker = null }) {
   const [activeSector, setActiveSector] = useState(SP500_SECTORS[0].id);
   const [selectedTickerInfo, setSelectedTickerInfo] = useState(null);
 
@@ -896,6 +896,15 @@ export default function StockSimulationSection({ rewardCash = 0, user = null }) 
       setLoadingSymbol(false);
     }
   };
+
+  const initialTickerRef = useRef(null);
+  useEffect(() => {
+    if (!initialTicker || initialTicker === initialTickerRef.current) return;
+    initialTickerRef.current = initialTicker;
+    setSymbolInput(initialTicker);
+    void fetchSymbolSeries(initialTicker, "realtime");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTicker]);
 
   const handleChartSourceChange = (mode) => {
     setChartSource(mode);

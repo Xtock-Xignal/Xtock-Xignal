@@ -59,6 +59,7 @@ export default function Home() {
   const [activeMenu, setActiveMenu] = useState("dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [todayDate, setTodayDate] = useState("");
+  const [simulationInitialTicker, setSimulationInitialTicker] = useState(null);
 
   const [quizRewardCash, setQuizRewardCash] = useState(0);
   const [attendanceRewardCash, setAttendanceRewardCash] = useState(0);
@@ -170,6 +171,12 @@ export default function Home() {
     setAttendanceRewardCash(0);
   };
 
+  const handleNewsTickerClick = (ticker) => {
+    setSimulationInitialTicker(ticker);
+    setActiveMenu("simulation");
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <div className="flex h-[100dvh] min-h-0 bg-slate-950 text-slate-100">
       <button
@@ -263,9 +270,15 @@ export default function Home() {
           <div className="animate-fade-in">
             {activeMenu === "dashboard" && <DashboardSection />}
             {activeMenu === "learn" && <LearningCenter onQuizCorrect={handleQuizCorrect} />}
-            {activeMenu === "simulator" && <NewsSimulatorSection />}
+            {activeMenu === "simulator" && (
+              <NewsSimulatorSection onTickerClick={handleNewsTickerClick} />
+            )}
             {activeMenu === "simulation" && (
-              <StockSimulationSection rewardCash={totalRewardCash} user={user} />
+              <StockSimulationSection
+                rewardCash={totalRewardCash}
+                user={user}
+                initialTicker={simulationInitialTicker}
+              />
             )}
             {activeMenu === "portfolio" && (
               <PortfolioSection user={user} isActive={activeMenu === "portfolio"} />
