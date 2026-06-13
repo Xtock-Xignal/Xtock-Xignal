@@ -161,7 +161,11 @@ export default function Home() {
   }, [user, rewardHydrated, applyRewardState]);
 
   if (!user) {
-    return <LoginPage onLogin={(userData) => setUser(userData)} />;
+    return <LoginPage onLogin={(userData) => {
+      setUser(userData);
+      // 로그인 성공 시 퀴즈 DB 생성을 백그라운드로 트리거 (결과 무시)
+      api.post("/api/quiz/generate").catch(() => {});
+    }} />;
   }
 
   const handleLogout = () => {

@@ -13,6 +13,7 @@ from passlib.context import CryptContext
 from app.api.news import router as news_router
 from app.api.dashboard_router import create_dashboard_router
 from app.api.terms import router as terms_router
+from app.api.quiz import router as quiz_router
 from app.services import backtest_service
 from chart.router import router as chart_router
 
@@ -181,6 +182,7 @@ app.include_router(news_router, prefix="/api/news")
 app.include_router(chart_router)
 app.include_router(create_dashboard_router(yf))
 app.include_router(terms_router, prefix="/api/terms")
+app.include_router(quiz_router, prefix="/api/quiz")
 
 BacktestPosition = backtest_service.BacktestPosition
 BacktestRequest = backtest_service.BacktestRequest

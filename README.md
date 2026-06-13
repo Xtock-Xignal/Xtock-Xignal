@@ -3,11 +3,17 @@
 
   # Xtock-Xignal
 
-  [![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
-  [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg)](https://fastapi.tiangolo.com/)
-  [![MongoDB](https://img.shields.io/badge/MongoDB-Ready-47A248.svg)](https://www.mongodb.com/)
+  [![Next.js](https://img.shields.io/badge/Next.js-latest-black.svg)](https://nextjs.org/)
+  [![FastAPI](https://img.shields.io/badge/FastAPI-latest-009688.svg)](https://fastapi.tiangolo.com/)
+  [![MongoDB](https://img.shields.io/badge/MongoDB-47A248.svg)](https://www.mongodb.com/)
+  [![Recharts](https://img.shields.io/badge/Recharts-3.x-22b5bf.svg)](https://recharts.org/)
+  [![Vercel](https://img.shields.io/badge/Frontend-Vercel-black.svg)](https://vercel.com/)
+  [![OCI](https://img.shields.io/badge/Server-OCI-F80000.svg)](https://www.oracle.com/cloud/)
+  [![DuckDNS](https://img.shields.io/badge/Domain-kro.kr-yellow.svg)](http://xtock-xignal.kro.kr)
 
   **AI를 활용한 지능형 금융 뉴스 캐싱 및 실시간 주식 거래 시스템**
+
+  ### 🌐 [http://xtock-xignal.kro.kr](http://xtock-xignal.kro.kr)
 </div>
 
 ---
@@ -49,9 +55,10 @@ XTock-Xignal은 단순한 정보 제공을 넘어 **[정보 습득 ➔ 자산 �
 </div>
 
 1. **지능형 뉴스 피드:** 사용자는 S&P 500 산업군별로 자동 분류된 글로벌 경제 뉴스를 실시간으로 탐색합니다.
-2. **AI 인터렉티브 사전:** 기사 내 난해한 영문 전문 용어나 문맥을 클릭하면, 즉석에서 AI가 초보자의 눈높이에 맞춘 3줄 요약과 해설을 제공합니다.
-3. **학습 보상 시스템:** 학습한 금융 지식을 바탕으로 퀴즈에 참여하며, 정답 시 시뮬레이션에 사용할 수 있는 가상 투자 자산(Seed Money)을 즉각적으로 획득합니다.
-4. **실전 모의투자:** 획득한 자산을 바탕으로 실제 증권사와 동일한 환경의 트레이딩 룸에서 글로벌 주식 종목들을 리스크 없이 매매하며 실전 감각을 체득합니다.
+2. **AI 인터렉티브 사전:** 기사 내 난해한 영문 전문 용어를 클릭하면 AI가 초보자 눈높이의 해설을 즉시 제공합니다. 동일 용어는 MongoDB에 영구 캐싱되어 이후 요청은 Gemini API 호출 없이 즉시 응답합니다.
+3. **학습 보상 시스템:** 학습 센터에서 금융 용어를 학습하고 Gemini API가 생성한 AI 퀴즈에 참여합니다. 퀴즈는 로그인 시마다 `quiz_bank` DB에 누적 생성되어 매번 새로운 문제를 제공합니다. 정답 시 가상 투자 자산(Seed Money)을 획득하며, 매일 출석 체크 보상도 지급됩니다.
+4. **실전 모의투자:** 획득한 자산으로 실제 증권사와 동일한 환경의 트레이딩 룸에서 글로벌 주식을 리스크 없이 매매합니다.
+5. **백테스팅:** 과거 특정 시점에 주식을 매수했다면 현재 얼마가 되었을지 이동평균 크로스 전략 기반으로 시뮬레이션합니다.
 
 ---
 
@@ -62,25 +69,34 @@ XTock-Xignal은 단순한 정보 제공을 넘어 **[정보 습득 ➔ 자산 �
 ### Frontend
 | 기술 | 엔지니어링 전략 및 활용 |
 | :---: | :--- |
-| <img src="https://cdn.simpleicons.org/nextdotjs/black" width="35" title="Next.js"/> | **메인 프레임워크**: SSR(Server-Side Rendering)을 활용하여 대시보드 초기 로딩 속도 최적화 및 동적 데이터 패칭 효율 극대화. |
+| <img src="https://cdn.simpleicons.org/nextdotjs/black" width="35" title="Next.js"/> | **메인 프레임워크**: React 기반 SPA 구조로 구성되며, Next.js의 라우팅 및 빌드 최적화를 활용. Turbopack 기반 개발 서버로 빠른 HMR 지원. |
 | <img src="https://cdn.simpleicons.org/tailwindcss/06B6D4" width="35" title="Tailwind CSS"/> | **UI/UX 구축**: 유틸리티 클래스를 활용하여 복잡한 트레이딩 화면의 레이아웃을 신속하게 렌더링. |
-| <img src="https://raw.githubusercontent.com/pmndrs/zustand/main/docs/favicon.ico" width="35" title="Zustand"/> | **무지연(Zero-Latency) 전역 상태 동기화**: 퀴즈 보상 획득 시 새로고침 없이 트레이딩 화면의 '매수 가능 잔고'를 즉각 업데이트하여 Props Drilling 병목을 우회. |
-| <img src="https://cdn.simpleicons.org/tradingview/131722" width="35" title="Lightweight Charts"/> | **메모리 누수 방지 차트 렌더링**: 방대한 실시간 주가 틱(Tick) 데이터 렌더링 시 발생하는 프레임 드랍을 막기 위해 HTML5 Canvas 기반의 경량 엔진 채택. |
+| <img src="https://cdn.simpleicons.org/axios/5A29E4" width="35" title="Axios"/> | **HTTP 통신**: Promise 기반 비동기 API 호출로 백엔드와의 데이터 통신을 처리. |
+| <img src="./docs/recharts.png" width="50" title="Recharts"/> | **OHLC 차트 렌더링**: ComposedChart 기반 캔들스틱 + 이동평균(MA) 복합 차트로 실시간 주가 및 과거 데이터를 시각화. |
 
 ### Backend & Database
 | 기술 | 엔지니어링 전략 및 활용 |
 | :---: | :--- |
-| <img src="https://cdn.simpleicons.org/fastapi/009688" width="35" title="FastAPI"/> | **비동기 체결 엔진 및 API 게이트웨이**: 클라이언트의 조작을 원천 차단하기 위해 유저 매수 요청 시 서버가 직접 외부 주가를 조회하고 잔고를 교차 검증(Cross-validation)하는 로직 수행. |
-| <img src="https://cdn.simpleicons.org/python/3776AB" width="35" title="Python 3.10+"/> | **백엔드 코어 연산**: 금융 데이터 비동기 스크래핑(Async Crawling) 및 하이브리드 AI 파이프라인 통합. |
-| <img src="https://cdn.simpleicons.org/mongodb/47A248" width="35" title="MongoDB"/> | **지능형 영구 캐싱(Intelligent Caching)**: AI가 생성한 비정형 해설 데이터를 DB에 영구 저장. 후속 사용자가 동일 단어 검색 시 LLM 호출 없이 DB에서 즉각 응답하여 장기적인 API 유지 비용을 0원으로 수렴시킴. |
+| <img src="https://cdn.simpleicons.org/fastapi/009688" width="35" title="FastAPI"/> | **비동기 체결 엔진 및 API 게이트웨이**: 클라이언트의 조작을 원천 차단하기 위해 유저 매수 요청 시 서버가 직접 외부 주가를 조회하고 잔고를 교차 검증(Cross-validation)하는 로직 수행. WebSocket을 통한 실시간 주가 스트리밍 지원. |
+| <img src="https://cdn.simpleicons.org/python/3776AB" width="35" title="Python"/> | **백엔드 코어 연산**: feedparser 기반 RSS 크롤링, newspaper3k 본문 추출, deep-translator 번역 파이프라인 통합. |
+| <img src="https://cdn.simpleicons.org/mongodb/47A248" width="35" title="MongoDB"/> | **다목적 영구 저장소**: AI 해설(`financial_terms`), 사용자 포트폴리오(`simulation_portfolios`), AI 생성 퀴즈(`quiz_bank`) 등 목적별 컬렉션으로 분리하여 관리. 동일 단어 재요청 시 LLM 호출 없이 즉각 응답하여 API 비용 절감. |
 
 ### AI Pipeline & Data Source
 | 기술 | 엔지니어링 전략 및 활용 |
 | :---: | :--- |
-| <img src="https://cdn.simpleicons.org/googlegemini/8E75B2" width="35" title="Google Gemini API"/> | **On-Demand 문맥 요약**: 전체 기사 일괄 처리가 아닌, 사용자가 요청한 시점에만 제한적으로 API를 호출하여 과금 및 한도 초과 방지. |
-| <img src="https://cdn.simpleicons.org/huggingface/FFD21E" width="35" title="Hugging Face"/> | **외부 종속성 제거 (<mark>BAAI/bge-m3</mark>)**: 외부 상용 API 연동 없이 서버 인프라 내부에서 수천 건의 기사 문맥을 실시간 분석하여 S&P 500 산업군별 자동 태깅 수행. |
-| <img src="./docs/yahoo.jpg" width="35" title="Yahoo Finance"/> | **증분 크롤링(Incremental Crawling)**: 독립된 백그라운드 스케줄러가 메인 서버 트래픽과 무관하게 신규 발행된 경제 기사 원문만 선별 수집하여 네트워크 I/O 부하 차단. |
-| <img src="./docs/Finnhub.png" width="35" title="Finnhub"/> | **<mark>실시간 뉴스 크롤링 및 주가 동기화(내용 수정 필요)</mark>**: 모의투자 체결 엔진을 위해 유효한 티커(Ticker) 상태와 정확한 호가를 실시간 검증함과 동시에 보조 뉴스 파이프라인으로 동작. |
+| <img src="https://cdn.simpleicons.org/googlegemini/8E75B2" width="35" title="Google Gemini API"/> | **On-Demand 문맥 요약 & AI 퀴즈 생성**: 금융 용어 해설은 사용자 요청 시점에만 호출하여 과금 방지. 로그인 시 학습 센터 용어 기반으로 다양한 유형의 퀴즈를 생성하여 `quiz_bank` DB에 중복 없이 누적 저장. |
+| <img src="./docs/yahoo.jpg" width="35" title="Yahoo Finance"/> | **메인 뉴스 & 주가 데이터 소스**: feedparser로 Yahoo Finance RSS를 증분 수집하고, yfinance로 실시간 호가 및 OHLC 이력 데이터를 조회. |
+| <img src="./docs/Finnhub.png" width="35" title="Finnhub"/> | **보조 뉴스 파이프라인 (선택)**: `FINNHUB_API_KEY` 설정 시 일반 뉴스 및 종목별 기업 뉴스를 추가 수집하여 뉴스 커버리지를 보강. |
+| <img src="https://cdn.simpleicons.org/huggingface/FFD21E" width="35" title="Hugging Face"/> | **GICS 섹터 자동 분류**: BAAI/bge-m3 백본을 fine-tuning하여 IG@Sector F1 **91.52%** 달성. 서버 스펙 제약(1GB RAM)으로 현재 배포 환경에서는 키워드 룰 기반 분류기로 운영 중. |
+
+### 인프라
+| 기술 | 엔지니어링 전략 및 활용 |
+| :---: | :--- |
+| <img src="./docs/OCI.png" width="35" title="Oracle Cloud"/> | **백엔드 서버 (OCI)**: Oracle Cloud Infrastructure VM 인스턴스에서 Docker Compose로 FastAPI + MongoDB를 컨테이너 기반으로 운영. |
+| <img src="https://cdn.simpleicons.org/vercel/black" width="35" title="Vercel"/> | **프론트엔드 배포 (Vercel)**: Next.js 앱을 Vercel에 배포. OCI 서버 스펙 부담을 분산하고 프론트엔드 서빙을 분리. |
+| <img src="https://cdn.simpleicons.org/githubactions/2088FF" width="35" title="GitHub Actions"/> | **CI/CD 자동 배포**: main 브랜치 push 시 GitHub Actions가 OCI 서버에 SSH 접속 후 자동 git pull 및 컨테이너 재시작. |
+| <img src="https://cdn.simpleicons.org/docker/2496ED" width="35" title="Docker"/> | **컨테이너 기반 운영**: docker-compose.prod.yml로 백엔드 및 MongoDB를 격리된 컨테이너로 실행하여 환경 일관성 보장. |
+| <img src="./docs/duckdns.png" width="35" title="DuckDNS"/> | **도메인 연결**: DuckDNS 기반 무료 동적 DNS로 OCI 서버의 공인 IP를 `xtock-xignal.kro.kr` 도메인에 연결. |
 
 ---
 
@@ -90,14 +106,14 @@ Xtock-Xignal은 대규모 금융 데이터 처리의 안정성, 시스템의 확
 
 ### 4.1 계층별 구조 및 명세 (Layered Specification)
 1. **클라이언트 계층**
-   * **컴포넌트 구성**: 실시간 뉴스 피드 UI, AI 금융 사전 모달, 모의투자 트레이딩 차트, 금융 퀴즈 및 인터렉티브 보상 시스템.
-   * **주요 역할**: 사용자와의 모든 상호작용을 처리하는 최상단 프론트엔드 영역입니다. 중앙 상태 저장소를 통한 전역 상태 관리를 수행하여 가상 자산의 증감이나 매매 결과가 복잡한 UI 트리 전체에 지연 없이 동기화되도록 제어합니다.
+   * **컴포넌트 구성**: 실시간 뉴스 피드 UI, AI 금융 사전 모달, Recharts 기반 모의투자 트레이딩 차트, 금융 퀴즈 및 인터랙티브 보상 시스템.
+   * **주요 역할**: 사용자와의 모든 상호작용을 처리하는 최상단 프론트엔드 영역입니다. React 상태 관리를 통해 가상 자산의 증감이나 매매 결과를 UI에 반영합니다.
 2. **백엔드 계층**
-   * **컴포넌트 구성**: 유저 계좌 관리 API, 시뮬레이션 매매 체결 엔진, 퀴즈 정답 검증 및 가상 보상 지급 모듈.
+   * **컴포넌트 구성**: 유저 계좌 관리 API, 시뮬레이션 매매 체결 엔진, 퀴즈 및 출석 가상 보상 지급 모듈, 이동평균 크로스 백테스팅 엔진.
    * **주요 역할**: 애플리케이션의 핵심 비즈니스 로직이 실행되는 백엔드 서버입니다. 프론트엔드의 요청을 접수하여 데이터를 가공 및 검증하고, 하위 데이터베이스나 외부 인프라 서비스로 안전하게 라우팅하는 API Gateway 역할을 전담합니다.
 3. **데이터 파이프라인**
-   * **컴포넌트 구성**: 비동기 증분 크롤러, 로컬 NLP 분류 엔진, 한국어 정제 및 데이터 적재 프로세서.
-   * **주요 역할**: 메인 애플리케이션 서버에 발생할 수 있는 트래픽 부하와 컴퓨팅 자원 병목을 차단하기 위해 백그라운드에서 완전히 격리되어 비동기적으로 동작하는 구역입니다. 외부 금융 소스로부터 원천 데이터를 수집하고 1차 가공을 수행합니다.
+   * **컴포넌트 구성**: feedparser 기반 RSS 증분 크롤러, 키워드 룰 기반 GICS 섹터 분류기, deep-translator 한국어 번역, newspaper3k 본문 추출 프로세서.
+   * **주요 역할**: 메인 애플리케이션 서버에 발생할 수 있는 트래픽 부하와 컴퓨팅 자원 병목을 차단하기 위해 백그라운드에서 완전히 격리되어 비동기적으로 동작하는 구역입니다. Yahoo Finance RSS 및 Finnhub(선택)으로부터 원천 데이터를 수집하고 1차 가공을 수행합니다.
 4. **데이터베이스 및 외부 서비스 계층**
    * **컴포넌트 구성**: MongoDB NoSQL 스토리지, 외부 금융 API 인프라, 대형 언어 모델(LLM) 연동 인터페이스.
    * **주요 역할**: 사용자 계정, 매매 이력 포트폴리오, 뉴스 캐싱 데이터, 금융 용어 사전을 목적별 컬렉션으로 분리하여 안전하게 영구 적재합니다. 비정형 데이터 분석 및 실시간성 검증이 필요한 시점에 한해 상용 LLM 및 주가 데이터 공급원과 통신합니다.
@@ -128,13 +144,40 @@ Xtock-Xignal은 대규모 금융 데이터 처리의 안정성, 시스템의 확
 * 엔진은 클라이언트의 요청 데이터를 신뢰하지 않고, 즉시 `External API`의 `Market Data`를 조회하여 실시간 호가를 확인(Fetch)합니다.
 * 동시에 `User/Virtual Account` DB를 조회하여 잔고 무결성을 교차 검증(Verify)한 후, 매매를 체결하고 포트폴리오와 잔고를 갱신(Update Portfolio & Balances)합니다.
 
-**Step 4. 금융 퀴즈 검증 및 보상 처리 (Quiz & Reward Engine)**
-* 클라이언트의 `Financial Quiz` 모듈에서 퀴즈 세션을 요청하면 백엔드가 `Quiz Bank` DB에서 문제(Questions)를 로드하여 전달합니다.
-* 사용자가 퀴즈 정답을 제출하면 `Quiz & Reward Engine`이 정답을 판별하고, `User & Account Manager`와 협력하여 `User/Virtual Account` DB에 가상 자산 보상을 즉각적으로 지급(Reward)합니다.
+**Step 4. 금융 퀴즈 및 보상 처리 (Quiz & Reward Engine)**
+* 로그인 시 백그라운드로 `POST /api/quiz/generate`가 호출되고, Gemini API가 학습 센터 금융 용어 기반 4지선다 퀴즈를 생성하여 `quiz_bank` 컬렉션에 중복 없이 누적 저장합니다.
+* 퀴즈 모드 진입 시 `GET /api/quiz/fetch`로 DB에서 랜덤 8문제를 추출하여 매 세션마다 다른 문제 조합을 제공합니다.
+* 사용자가 정답을 맞히면 클라이언트가 `/api/user/rewards/quiz`를 호출하고, 백엔드가 `User/Virtual Account` DB의 가상 자산 잔고를 즉시 증가시킵니다.
+* 매일 첫 접속 시 `/api/user/attendance`를 통해 출석 보상도 별도로 지급됩니다.
 ---
 
 ## 5. 설치 및 실행 방법 (Getting Started)
 
-> **안내:** 본 프로젝트의 로컬 환경 세팅, 환경 변수(`.env`) 설정 및 상세 실행 가이드는 추후 **Git Docs (또는 GitHub Wiki)** 페이지를 통해 별도로 제공될 예정입니다.
+### 사전 요구사항
+- Docker & Docker Compose
+- Google Gemini API Key ([발급](https://aistudio.google.com/app/apikey))
+- Finnhub API Key (선택, [발급](https://finnhub.io/register))
 
-* **[XTock-Xignal 상세 실행 가이드 (업데이트 예정)](#)**
+### 환경변수 설정
+
+```bash
+# 루트 .env
+cp .env.example .env
+# GOOGLE_API_KEY 입력 필수
+
+# 백엔드 .env
+cp backend/.env.example backend/.env
+# Docker 사용 시 기본값으로 동작
+```
+
+### 실행
+
+```bash
+docker compose up -d --build
+```
+
+| 서비스 | 주소 |
+| :--- | :--- |
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:8000 |
+| MongoDB | localhost:27017 |
